@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch & Serial · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Batch & Serial Tracking</div>
+        <div class="page-subtitle">Lot traceability · expiry · recalls</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="bsTabs">
+      <div class="tab active" data-tab="batches">Batches</div>
+      <div class="tab" data-tab="serials">Serial Numbers</div>
+      <div class="tab" data-tab="expiry">Expiry Alerts</div>
+    </div>
+
+    <div class="tab-panel active" data-panel="batches"><div class="card"><div class="card-body" id="batchesBody"></div></div></div>
+    <div class="tab-panel" data-panel="serials"><div class="card"><div class="card-body" id="serialsBody"></div></div></div>
+    <div class="tab-panel" data-panel="expiry"><div class="card"><div class="card-body" id="expiryBody"></div></div></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, initTabs } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Inventory', 'Batch & Serial'], notifications });
+
+document.getElementById('batchesBody').innerHTML = dataTable({
+  columns: [
+    { label: 'Batch #', mono: true, key: 'batch' },
+    { label: 'Item', key: 'item' },
+    { label: 'Mfg Date', render: r => fmtDate(r.mfg) },
+    { label: 'Expiry', render: r => fmtDate(r.exp) },
+    { label: 'Qty', align: 'right', num: true, key: 'qty' },
+    { label: 'Bin', key: 'bin', mono: true },
+    { label: 'Status', render: r => r.daysLeft < 30 ? '<span class="chip chip-critical">Expiring soon</span>'
+                       : r.daysLeft < 90 ? '<span class="chip chip-warning">Watch</span>'
+                       : '<span class="chip chip-success">OK</span>' },
+  ],
+  rows: [
+    { batch: 'BATCH-2026-08-15', item: 'IT-100 Steel Plate', mfg: '2026-08-15', exp: '2027-08-15', qty: 80, bin: 'A-12-B-01', daysLeft: 355 },
+    { batch: 'BATCH-2026-07-22', item: 'IT-205 Aluminium',   mfg: '2026-07-22', exp: '2027-07-22', qty: 420, bin: 'A-12-B-02', daysLeft: 331 },
+    { batch: 'BATCH-2025-09-30', item: 'IT-310 Bearing',     mfg: '2025-09-30', exp: '2026-09-30', qty: 45, bin: 'A-12-B-03', daysLeft: 37 },
+  ]
+});
+
+document.getElementById('serialsBody').innerHTML = dataTable({
+  columns: [
+    { label: 'Serial', key: 'serial', mono: true },
+    { label: 'Item', key: 'item' },
+    { label: 'Status', render: r => r.status === 'In Stock'
+        ? '<span class="chip chip-success">In Stock</span>'
+        : r.status === 'Sold' ? '<span class="chip chip-info">Sold</span>'
+        : '<span class="chip chip-warning">In Service</span>' },
+    { label: 'Warranty Until', key: 'warranty' },
+  ],
+  rows: [
+    { serial: 'SN-MTR-2026-0001', item: 'IT-401 Motor 5HP', status: 'In Stock', warranty: '2029-06-30' },
+    { serial: 'SN-MTR-2026-0002', item: 'IT-401 Motor 5HP', status: 'Sold', warranty: '2029-06-30' },
+    { serial: 'SN-MTR-2026-0003', item: 'IT-401 Motor 5HP', status: 'In Service', warranty: '2028-11-15' },
+  ]
+});
+
+document.getElementById('expiryBody').innerHTML = dataTable({
+  columns: [
+    { label: 'Item', key: 'item' },
+    { label: 'Batch', key: 'batch', mono: true },
+    { label: 'Expiry', key: 'exp' },
+    { label: 'Days Left', align: 'right', num: true, render: r => `<span style="color:${r.days < 30 ? 'var(--critical)' : r.days < 90 ? 'var(--warning)' : 'var(--text)'}">${r.days}</span>` },
+    { label: 'Action', render: () => '<button class="btn btn-primary btn-sm">Plan Disposal</button>' },
+  ],
+  rows: [
+    { item: 'IT-310 Bearing', batch: 'BATCH-2025-09-30', exp: '2026-09-30', days: 37 },
+    { item: 'IT-550 Copper Wire', batch: 'BATCH-2025-10-12', exp: '2026-10-12', days: 49 },
+  ]
+});
+initTabs();
+</script>
+</body>
+</html>

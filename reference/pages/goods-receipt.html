@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goods Receipt (GRN) · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Goods Receipt (GRN)</div>
+        <div class="page-subtitle">Physical receipt against PO · QC · put-away</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Scan Barcode</button>
+        <button class="btn btn-primary" id="newGrnBtn">New GRN</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Pending GRN</span></div><div class="kpi-value">2</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Received Today</span></div><div class="kpi-value" style="color:var(--success)">4</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">QC Pending</span></div><div class="kpi-value" style="color:var(--warning)">1</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Put-away Pending</span></div><div class="kpi-value">2</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-body" id="grnTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate, fmtNumber } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Goods Receipt'], notifications });
+
+const grns = [
+  { id: 'GRN-2011', po: 'PO-2011', vendor: 'Vendor A', date: '2026-08-24', items: 3, qty: 500, bin: 'A-12-B-01', qc: 'Passed', status: 'Put-away done' },
+  { id: 'GRN-2012', po: 'PO-2012', vendor: 'Vendor C', date: '2026-08-23', items: 5, qty: 1200, bin: 'A-12-B-02', qc: 'Pending', status: 'QC in progress' },
+  { id: 'GRN-2013', po: 'PO-2014', vendor: 'Vendor A', date: '2026-08-22', items: 2, qty: 780, bin: 'A-13-B-01', qc: 'Passed', status: 'Awaiting invoice' },
+  { id: 'GRN-2014', po: 'PO-2015', vendor: 'Vendor D', date: '2026-08-21', items: 1, qty: 95, bin: 'B-01-A-03', qc: 'Rejected', status: 'Return to vendor' },
+];
+
+document.getElementById('grnTable').innerHTML = dataTable({
+  columns: [
+    { label: 'GRN #', key: 'id', mono: true },
+    { label: 'PO #', key: 'po', mono: true },
+    { label: 'Vendor', key: 'vendor' },
+    { label: 'Received', render: r => fmtDate(r.date) },
+    { label: 'Items', key: 'items', align: 'right', num: true },
+    { label: 'Qty', key: 'qty', align: 'right', num: true },
+    { label: 'Bin', key: 'bin', mono: true },
+    { label: 'QC', render: r => {
+      const map = { Passed: 'success', Pending: 'warning', Rejected: 'critical' };
+      return `<span class="chip chip-${map[r.qc]}">${r.qc}</span>`;
+    }},
+    { label: 'Status', render: r => `<span class="chip chip-neutral">${r.status}</span>` },
+    { label: '', render: () => '<button class="btn btn-ghost btn-sm">View</button>' },
+  ],
+  rows: grns
+});
+
+document.getElementById('newGrnBtn').addEventListener('click', () => toast('New GRN', 'Scan PO barcode to begin', 'info'));
+</script>
+</body>
+</html>

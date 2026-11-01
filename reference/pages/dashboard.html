@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content" id="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title" id="welcomeTitle">Dashboard</div>
+        <div class="page-subtitle" id="welcomeSub">Loading…</div>
+      </div>
+      <div class="page-actions">
+        <div class="segmented" id="rangeSeg">
+          <button data-range="30d">30D</button>
+          <button data-range="qtd" class="active">QTD</button>
+          <button data-range="ytd">YTD</button>
+        </div>
+        <button class="btn btn-secondary" id="densityBtn">Comfortable</button>
+        <button class="btn btn-primary" id="newActionBtn">New</button>
+      </div>
+    </div>
+
+    <!-- KPI row -->
+    <div class="grid grid-kpi" id="kpiRow"></div>
+
+    <!-- Charts + AI alerts -->
+    <div class="grid grid-charts" style="margin-top:var(--sp-5)">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Sales vs Forecast</div>
+            <div class="card-subtitle">Last 12 months · ₹ in Crores</div>
+          </div>
+          <div class="segmented">
+            <button class="active">Monthly</button>
+            <button>Quarterly</button>
+          </div>
+        </div>
+        <div class="card-body" style="height:320px">
+          <canvas id="salesTrendChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">AI Alerts</div>
+            <div class="card-subtitle" id="alertCount">Loading…</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="viewAllAlerts">View all</button>
+        </div>
+        <div class="card-body" id="alertList" style="padding:var(--sp-3);max-height:320px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Workflow strip -->
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header">
+        <div class="card-title">Workflow Status</div>
+        <button class="btn btn-ghost btn-sm" id="viewWorkflows">All workflows</button>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-4" id="workflowStrip"></div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header">
+        <div class="card-title">Recent activity</div>
+      </div>
+      <div class="card-body" id="recentActivity"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="../js/dashboard.js"></script>
+</body>
+</html>

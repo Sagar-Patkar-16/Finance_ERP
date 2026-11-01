@@ -1,0 +1,12 @@
+{
+  "name": "ERP Platform — AI-Powered Modular ERP",
+  "short_name": "ERP",
+  "description": "AI-native ERP for Finance, Operations, and People",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0B1220",
+  "theme_color": "#4F46E5",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

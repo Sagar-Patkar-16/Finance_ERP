@@ -1,0 +1,85 @@
+<!-- anomalies.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anomaly Alert Centre · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">AI Alert Centre</div>
+        <div class="page-subtitle">Anomalies detected across all modules</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="anTab">
+      <div class="tab active" data-tab="all">All</div>
+      <div class="tab" data-tab="critical">Critical</div>
+      <div class="tab" data-tab="warning">Warning</div>
+      <div class="tab" data-tab="attention">Attention</div>
+      <div class="tab" data-tab="info">Information</div>
+    </div>
+
+    <div id="alertGrid"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, statusChip, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Intelligence', 'Anomalies'], notifications });
+
+const alerts = await api.getAiAlerts();
+
+function render(filter = 'all') {
+  const list = filter === 'all' ? alerts : alerts.filter(a => a.level === filter);
+  document.getElementById('alertGrid').innerHTML = list.map(a => `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-body" style="display:flex;gap:14px;align-items:flex-start">
+        <span style="color:var(--${a.level});flex-shrink:0;margin-top:2px">${icon(
+          { critical:'alert-circle', warning:'alert-triangle', attention:'clock', info:'info', success:'check-circle' }[a.level] || 'info', 20)}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-weight:600;font-size:14px">${a.title}</span>
+            ${statusChip(a.level, a.level.charAt(0).toUpperCase() + a.level.slice(1))}
+          </div>
+          <div style="font-size:13px;color:var(--text-muted)">${a.msg}</div>
+          <div style="font-size:11px;color:var(--text-faint);margin-top:6px">${a.module} · ${a.ts}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" data-ack="${a.id}">Acknowledge</button>
+      </div>
+    </div>`).join('') || `<div class="empty"><div class="empty-title">No alerts in this category</div></div>`;
+}
+
+render();
+document.getElementById('anTab').addEventListener('click', e => {
+  if (e.target.tagName !== 'DIV' || !e.target.classList.contains('tab')) return;
+  document.querySelectorAll('#anTab .tab').forEach(t => t.classList.toggle('active', t === e.target));
+  render(e.target.dataset.tab);
+});
+document.getElementById('alertGrid').addEventListener('click', e => {
+  const btn = e.target.closest('[data-ack]');
+  if (btn) { toast('Acknowledged', 'Alert marked as reviewed', 'success'); btn.disabled = true; }
+});
+</script>
+</body>
+</html>

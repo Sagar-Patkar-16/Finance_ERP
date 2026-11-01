@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replenishment · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Automated Replenishment</div>
+        <div class="page-subtitle">Reorder suggestions · auto-PR · vendor routing</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Configure Rules</button>
+        <button class="btn btn-primary">Auto-Create PRs</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Items to Replenish</span></div><div class="kpi-value">7</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Est. Value</span></div><div class="kpi-value">₹18.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Auto-Approved</span></div><div class="kpi-value" style="color:var(--success)">4</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Needs Approval</span></div><div class="kpi-value" style="color:var(--warning)">3</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Replenishment Suggestions</div></div>
+      <div class="card-body" id="replTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtNumber } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, confirmDialog } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Supply Chain', 'Replenishment'], notifications });
+
+const items = await api.getItems();
+const rows = items.map(i => {
+  const gap = (i.demand + i.safety) - i.stock;
+  return {
+    code: i.code,
+    name: i.name,
+    stock: i.stock,
+    safety: i.safety,
+    demand: i.demand,
+    lead: i.leadTime,
+    recommend: Math.max(0, gap + i.safety),
+    value: Math.max(0, gap + i.safety) * (i.value / i.stock || 100),
+    vendor: ['Vendor A', 'Vendor B', 'Vendor C'][Math.floor(Math.random()*3)],
+    auto: gap + i.safety < 500
+  };
+}).filter(r => r.recommend > 0);
+
+document.getElementById('replTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Item', key: 'code', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'Stock', align: 'right', num: true, key: 'stock' },
+    { label: 'Safety', align: 'right', num: true, key: 'safety' },
+    { label: 'Recommend', align: 'right', num: true, render: r => `<b>${fmtNumber(r.recommend)}</b>` },
+    { label: 'Est. Value', align: 'right', num: true, render: r => fmtCurrencyINR(r.value) },
+    { label: 'Suggested Vendor', key: 'vendor' },
+    { label: 'Mode', render: r => r.auto
+        ? '<span class="chip chip-success">Auto-approve</span>'
+        : '<span class="chip chip-warning">Needs approval</span>' },
+    { label: '', render: r => `<button class="btn btn-primary btn-sm" data-pr="${r.code}">Create PR</button>` },
+  ],
+  rows
+});
+
+document.getElementById('replTable').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-pr]');
+  if (!b) return;
+  const ok = await confirmDialog({
+    title: 'Create Purchase Requisition?',
+    message: `Draft PR for ${b.dataset.pr} will be created and routed.`,
+    confirmText: 'Create PR',
+  });
+  if (ok) toast('PR created', `Requisition for ${b.dataset.pr} routed to Purchase Manager`, 'success');
+});
+</script>
+</body>
+</html>

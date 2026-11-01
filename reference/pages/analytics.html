@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytics · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Analytics</div>
+        <div class="page-subtitle">Cross-module KPIs · business intelligence</div>
+      </div>
+      <div class="page-actions">
+        <select class="select" style="width:auto"><option>Last 30 days</option><option>Last 90 days</option><option>YTD</option></select>
+      </div>
+    </div>
+
+    <div class="grid grid-charts">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Revenue vs Cost</div></div>
+        <div class="card-body" style="height:300px"><canvas id="revCost"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Profit Split</div></div>
+        <div class="card-body" style="height:300px"><canvas id="profitSplit"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:var(--sp-5)">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Top Products</div></div>
+        <div class="card-body">
+          <div style="font-size:13px;line-height:2">
+            <div style="display:flex;justify-content:space-between"><span>Pump Assembly A</span><b>₹3.2 Cr</b></div>
+            <div style="display:flex;justify-content:space-between"><span>Motor Frame B</span><b>₹2.4 Cr</b></div>
+            <div style="display:flex;justify-content:space-between"><span>Bracket C</span><b>₹1.8 Cr</b></div>
+            <div style="display:flex;justify-content:space-between"><span>Valve Body E</span><b>₹1.4 Cr</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Top Customers</div></div>
+        <div class="card-body">
+          <div style="font-size:13px;line-height:2">
+            <div style="display:flex;justify-content:space-between"><span>LMN Pharma</span><b>₹3.1 Cr</b></div>
+            <div style="display:flex;justify-content:space-between"><span>ABC Industries</span><b>₹2.4 Cr</b></div>
+            <div style="display:flex;justify-content:space-between"><span>XYZ Manufacturing</span><b>₹1.8 Cr</b></div>
+            <div style="display:flex;justify-content:space-between"><span>PQR Engineering</span><b>₹1.2 Cr</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Top Vendors</div></div>
+        <div class="card-body">
+          <div style="font-size:13px;line-height:2">
+            <div style="display:flex;justify-content:space-between"><span>Vendor C</span><b>₹98 L</b></div>
+            <div style="display:flex;justify-content:space-between"><span>Vendor A</span><b>₹85 L</b></div>
+            <div style="display:flex;justify-content:space-between"><span>Vendor B</span><b>₹62 L</b></div>
+            <div style="display:flex;justify-content:space-between"><span>Vendor D</span><b>₹31 L</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { lineChart, doughnutChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Intelligence', 'Analytics'], notifications });
+
+lineChart('revCost', {
+  labels: ['Mar','Apr','May','Jun','Jul','Aug'],
+  datasets: [
+    { label: 'Revenue', data: [8.2, 8.9, 9.4, 10.1, 10.8, 11.2], color: '#4F46E5', fill: true },
+    { label: 'Cost',    data: [6.4, 6.8, 7.2, 7.6, 8.1, 8.4], color: '#F59E0B' },
+  ]
+});
+
+doughnutChart('profitSplit', {
+  labels: ['Gross Profit', 'Operating Cost', 'Tax & Other'],
+  data: [62, 26, 12],
+  colors: ['#10B981', '#F59E0B', '#6B7280']
+});
+</script>
+</body>
+</html>

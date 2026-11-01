@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cycle Count · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Cycle Count</div>
+        <div class="page-subtitle">Physical count · variance · adjustment posting</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary">Start New Count</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Counts This Month</span></div><div class="kpi-value">24</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Variance Items</span></div><div class="kpi-value" style="color:var(--warning)">3</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Variance Value</span></div><div class="kpi-value" style="color:var(--critical)">−₹18,400</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Accuracy</span></div><div class="kpi-value">98.7%</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Recent Counts</div></div>
+      <div class="card-body" id="ccTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate, fmtNumber, fmtCurrencyINR } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, confirmDialog } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Inventory', 'Cycle Count'], notifications });
+
+const rows = [
+  { id: 'CC-101', date: '2026-08-24', item: 'IT-100 Steel Plate', system: 92, physical: 80, diff: -12, value: -2880, status: 'Adjustment pending' },
+  { id: 'CC-102', date: '2026-08-24', item: 'IT-205 Aluminium',   system: 420, physical: 420, diff: 0, value: 0, status: 'Matched' },
+  { id: 'CC-103', date: '2026-08-23', item: 'IT-310 Bearing',     system: 48, physical: 45, diff: -3, value: -9000, status: 'Adjustment pending' },
+  { id: 'CC-104', date: '2026-08-22', item: 'IT-550 Copper Wire', system: 1200, physical: 1200, diff: 0, value: 0, status: 'Matched' },
+];
+
+document.getElementById('ccTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Count #', key: 'id', mono: true },
+    { label: 'Date', render: r => fmtDate(r.date) },
+    { label: 'Item', key: 'item' },
+    { label: 'System', align: 'right', num: true, render: r => fmtNumber(r.system) },
+    { label: 'Physical', align: 'right', num: true, render: r => fmtNumber(r.physical) },
+    { label: 'Diff', align: 'right', num: true, render: r => r.diff === 0
+        ? '—'
+        : `<span style="color:${r.diff < 0 ? 'var(--critical)' : 'var(--success)'}">${r.diff > 0 ? '+' : ''}${r.diff}</span>` },
+    { label: 'Value', align: 'right', num: true, render: r => r.value ? fmtCurrencyINR(r.value) : '—' },
+    { label: 'Status', render: r => r.status === 'Matched'
+        ? '<span class="chip chip-success">Matched</span>'
+        : '<span class="chip chip-warning">Adjustment pending</span>' },
+    { label: '', render: r => r.status !== 'Matched' ? `<button class="btn btn-primary btn-sm" data-post="${r.id}">Post</button>` : '' },
+  ],
+  rows
+});
+
+document.getElementById('ccTable').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-post]');
+  if (!b) return;
+  const ok = await confirmDialog({ title: 'Post adjustment?', message: 'This will update inventory and post to GL.', confirmText: 'Post' });
+  if (ok) toast('Adjustment posted', 'GL entry created, audit logged', 'success');
+});
+</script>
+</body>
+</html>

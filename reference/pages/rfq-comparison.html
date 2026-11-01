@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RFQ Comparison · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">RFQ Comparison</div>
+        <div class="page-subtitle">RFQ-205 · Steel Plate 5mm · 500 KG</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="backBtn">Back to RFQ</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Vendor Responses</div></div>
+      <div class="card-body" style="overflow-x:auto">
+        <table class="data-table" id="rfqTable">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th class="text-right">Price (₹)</th>
+              <th class="text-right">Delivery</th>
+              <th>Payment Terms</th>
+              <th class="text-right">Rating</th>
+              <th class="text-right">Total (₹)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rfqBody"></tbody>
+        </table>
+      </div>
+      <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="text-muted" style="font-size:12px">Best price and delivery highlighted. Rating is historical vendor performance.</span>
+        <span id="awardInfo" class="text-muted" style="font-size:12px"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, toast, confirmDialog } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'RFQ', 'Comparison'], notifications });
+
+const vendors = await api.getVendors();
+const QTY = 500;
+const bestPrice = Math.min(...vendors.map(v => v.price));
+const bestDelivery = Math.min(...vendors.map(v => v.delivery));
+
+document.getElementById('rfqBody').innerHTML = vendors.map(v => {
+  const total = v.price * QTY;
+  const priceBest = v.price === bestPrice;
+  const delBest = v.delivery === bestDelivery;
+  return `
+    <tr>
+      <td><b>${v.name}</b><div style="font-size:11px;color:var(--text-muted)">${v.contact}</div></td>
+      <td class="text-right num" style="${priceBest ? 'color:var(--success);font-weight:600' : ''}">₹${v.price}</td>
+      <td class="text-right num" style="${delBest ? 'color:var(--success);font-weight:600' : ''}">${v.delivery} days</td>
+      <td>${v.payTerms}</td>
+      <td class="text-right num">${v.rating} ★</td>
+      <td class="text-right num">${fmtCurrencyINR(total)}</td>
+      <td class="text-right"><button class="btn btn-primary btn-sm" data-award="${v.id}">Award PO</button></td>
+    </tr>`;
+}).join('');
+
+document.getElementById('rfqBody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-award]');
+  if (!btn) return;
+  const v = vendors.find(x => x.id === btn.dataset.award);
+  const ok = await confirmDialog({
+    title: `Award PO to ${v.name}?`,
+    message: `This will create PO-2016 for 500 KG Steel Plate 5mm at ₹${v.price}/unit. Total: ${fmtCurrencyINR(v.price * QTY)}.`,
+    confirmText: 'Create PO',
+    variant: 'primary'
+  });
+  if (ok) {
+    document.getElementById('awardInfo').innerHTML = `<span class="chip chip-success">${icon('check', 12)} PO-2016 created for ${v.name}</span>`;
+    toast('PO created', `PO-2016 sent to ${v.name}`, 'success');
+  }
+});
+
+document.getElementById('backBtn').addEventListener('click', () => history.back());
+</script>
+</body>
+</html>

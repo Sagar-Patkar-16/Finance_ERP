@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Training</div>
+        <div class="page-subtitle">Programs · calendar · certifications · expiry alerts</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">Schedule Training</button></div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Active Programs</span></div><div class="kpi-value">6</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Enrolled</span></div><div class="kpi-value">84</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Completed MTD</span></div><div class="kpi-value" style="color:var(--success)">42</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Certifications Expiring</span></div><div class="kpi-value" style="color:var(--warning)">7</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Training Programs</div></div>
+      <div class="card-body" id="trTable"></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Certification Expiry Alerts</div></div>
+      <div class="card-body" id="certTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['HRMS', 'Training'], notifications });
+
+document.getElementById('trTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Program', key: 'title' },
+    { label: 'Category', key: 'cat' },
+    { label: 'Trainer', key: 'trainer' },
+    { label: 'Start', render: r => fmtDate(r.start) },
+    { label: 'Duration', key: 'dur' },
+    { label: 'Enrolled', align: 'right', num: true, key: 'enrolled' },
+    { label: 'Status', render: r => r.status === 'Ongoing'
+        ? '<span class="chip chip-info">Ongoing</span>'
+        : r.status === 'Completed' ? '<span class="chip chip-success">Completed</span>'
+        : '<span class="chip chip-neutral">Scheduled</span>' },
+  ],
+  rows: [
+    { title: 'CNC Programming Advanced',   cat: 'Technical',    trainer: 'Fanuc India', start: '2026-09-15', dur: '3 days', enrolled: 8,  status: 'Scheduled' },
+    { title: 'Safety & Compliance FY27',   cat: 'Compliance',   trainer: 'Internal',    start: '2026-08-10', dur: '1 day',  enrolled: 42, status: 'Completed' },
+    { title: 'Sales Negotiation Skills',   cat: 'Soft Skills',  trainer: 'External',    start: '2026-09-01', dur: '2 days', enrolled: 12, status: 'Ongoing' },
+    { title: 'Six Sigma Green Belt',       cat: 'Process',      trainer: 'ASQ Certified', start: '2026-10-05', dur: '5 days', enrolled: 15, status: 'Scheduled' },
+  ]
+});
+
+document.getElementById('certTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Employee', key: 'emp' },
+    { label: 'Certification', key: 'cert' },
+    { label: 'Issued By', key: 'issuer' },
+    { label: 'Expires', render: r => fmtDate(r.exp) },
+    { label: 'Days Left', align: 'right', num: true, render: r => `<span style="color:${r.days < 30 ? 'var(--critical)' : r.days < 90 ? 'var(--warning)' : 'var(--text)'}">${r.days}</span>` },
+    { label: '', render: () => '<button class="btn btn-secondary btn-sm">Notify</button>' },
+  ],
+  rows: [
+    { emp: 'Rajesh Kumar', cert: 'CNC Programmer Level 2', issuer: 'Fanuc',       exp: '2026-10-15', days: 21 },
+    { emp: 'Manoj Joshi',  cert: 'Welding Cert AWS D1.1',  issuer: 'AWS',         exp: '2026-11-20', days: 57 },
+    { emp: 'Priya Nair',   cert: 'Six Sigma Green Belt',   issuer: 'ASQ',         exp: '2027-03-01', days: 158 },
+  ]
+});
+</script>
+</body>
+</html>

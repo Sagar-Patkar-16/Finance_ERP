@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor Scorecard · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Vendor Scorecard</div>
+        <div class="page-subtitle">Quality · delivery · price · responsiveness</div>
+      </div>
+    </div>
+
+    <div id="cards"></div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Vendor Comparison</div></div>
+      <div class="card-body" style="height:340px"><canvas id="scoreChart"></canvas></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { barChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Vendor Scorecard'], notifications });
+
+const vendors = await api.getVendors();
+
+document.getElementById('cards').innerHTML = vendors.map(v => {
+  const q = Math.round(v.rating * 20);
+  const d = Math.round(v.rating * 19);
+  const p = Math.round(v.rating * 18);
+  return `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <div style="font-weight:600;font-size:15px">${v.name}</div>
+            <div class="text-muted" style="font-size:12px">${v.id} · ${v.category}</div>
+          </div>
+          <span class="chip chip-${v.rating >= 4.5 ? 'success' : v.rating >= 4 ? 'info' : 'warning'}">Overall ${v.rating} ★</span>
+        </div>
+        <div class="grid grid-4" style="gap:16px">
+          ${[['Quality', q], ['Delivery', d], ['Price', p], ['Response', Math.round(v.rating * 17)]].map(([label, val]) => `
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span class="text-muted">${label}</span><b>${val}%</b></div>
+              <div class="progress"><div class="progress-bar ${val >= 80 ? 'success' : val >= 60 ? '' : 'warning'}" style="width:${val}%"></div></div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}).join('');
+
+barChart('scoreChart', {
+  labels: vendors.map(v => v.name),
+  datasets: [
+    { label: 'Quality',      data: vendors.map(v => Math.round(v.rating * 20)), color: '#4F46E5' },
+    { label: 'Delivery',     data: vendors.map(v => Math.round(v.rating * 19)), color: '#06B6D4' },
+    { label: 'Price',        data: vendors.map(v => Math.round(v.rating * 18)), color: '#8B5CF6' },
+  ]
+});
+</script>
+</body>
+</html>

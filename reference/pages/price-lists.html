@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Price Lists · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Price Lists</div>
+        <div class="page-subtitle">Customer / segment pricing · discounts · validity</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary">New Price List</button>
+      </div>
+    </div>
+
+    <div id="plTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate, fmtCurrencyINR } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Sales & CRM', 'Price Lists'], notifications });
+
+const lists = [
+  { id: 'PL-001', name: 'Wholesale Standard', applies: 'All wholesale customers', currency: 'INR', items: 142, valid: '2026-12-31', status: 'Active' },
+  { id: 'PL-002', name: 'LMN Pharma Contract', applies: 'LMN Pharma', currency: 'INR', items: 24, valid: '2027-03-31', status: 'Active' },
+  { id: 'PL-003', name: 'Export — USD', applies: 'Export customers', currency: 'USD', items: 84, valid: '2026-12-31', status: 'Active' },
+  { id: 'PL-004', name: 'Diwali Promo 2026', applies: 'All customers', currency: 'INR', items: 18, valid: '2026-11-15', status: 'Draft' },
+];
+
+document.getElementById('plTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Code', key: 'id', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'Applies To', key: 'applies' },
+    { label: 'Currency', key: 'currency' },
+    { label: 'Items', key: 'items', align: 'right', num: true },
+    { label: 'Valid Until', render: r => fmtDate(r.valid) },
+    { label: 'Status', render: r => r.status === 'Active'
+        ? '<span class="chip chip-success">Active</span>'
+        : '<span class="chip chip-warning">Draft</span>' },
+    { label: '', render: () => '<button class="btn btn-ghost btn-sm">Edit</button>' },
+  ],
+  rows: lists
+});
+</script>
+</body>
+</html>

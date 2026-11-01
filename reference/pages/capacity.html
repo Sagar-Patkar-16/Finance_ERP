@@ -1,0 +1,64 @@
+<!-- capacity.html (§5.6 stacked bars) -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capacity Planning · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Capacity Planning</div>
+        <div class="page-subtitle">Available · Planned · Overload per work center</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Work Center Load</div>
+        <div style="display:flex;gap:14px;font-size:12px;color:var(--text-muted)">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--chart-1);border-radius:2px;margin-right:4px"></span>Available</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--chart-2);border-radius:2px;margin-right:4px"></span>Planned</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--critical);border-radius:2px;margin-right:4px"></span>Overload</span>
+        </div>
+      </div>
+      <div class="card-body" style="height:360px"><canvas id="capacityChart"></canvas></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { stackedBar } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'Capacity'], notifications });
+
+stackedBar('capacityChart', {
+  labels: ['WC-01 Lathe', 'WC-02 Milling', 'WC-03 CNC', 'WC-04 Welding', 'WC-05 Assembly'],
+  datasets: [
+    { label: 'Available', data: [40, 30, 25, 45, 50], color: '#4F46E5' },
+    { label: 'Planned',   data: [50, 55, 65, 45, 40], color: '#06B6D4' },
+    { label: 'Overload',  data: [10, 15, 10, 10, 10], color: '#DC2626' },
+  ]
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bank Reconciliation · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Bank Reconciliation</div>
+        <div class="page-subtitle">HDFC Bank · Statement period: 01–24 Aug 2026</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="importBtn">Import Statement</button>
+        <button class="btn btn-primary" id="autoMatchBtn">Auto-Match</button>
+      </div>
+    </div>
+
+    <div class="tabs" id="bucketTabs">
+      <div class="tab active" data-tab="matched">Matched</div>
+      <div class="tab" data-tab="unmatched">Unmatched</div>
+      <div class="tab" data-tab="partial">Partially Matched</div>
+      <div class="tab" data-tab="exceptions">Exceptions</div>
+    </div>
+
+    <div class="tab-panel active" data-panel="matched">
+      <div class="card"><div class="card-body" id="matchedBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="unmatched">
+      <div class="card"><div class="card-body" id="unmatchedBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="partial">
+      <div class="card"><div class="card-body" id="partialBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="exceptions">
+      <div class="card"><div class="card-body" id="exceptionsBody"></div></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, initTabs, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Finance', 'Bank Reconciliation'], notifications });
+
+const recon = await api.getBankRecon();
+
+const cols = [
+  { label: 'Date', key: 'date', render: r => fmtDate(r.date) },
+  { label: 'Reference', key: 'ref', mono: true },
+  { label: 'Description', key: 'desc' },
+  { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+];
+
+document.getElementById('matchedBody').innerHTML    = dataTable({ columns: cols, rows: recon.matched });
+document.getElementById('unmatchedBody').innerHTML  = dataTable({ columns: cols, rows: recon.unmatched });
+document.getElementById('partialBody').innerHTML    = dataTable({ columns: cols, rows: recon.partial });
+document.getElementById('exceptionsBody').innerHTML = dataTable({ columns: cols, rows: recon.exceptions });
+
+initTabs();
+
+document.getElementById('autoMatchBtn').addEventListener('click', () => toast('Auto-match running', 'Matching transactions against GL entries…', 'info'));
+document.getElementById('importBtn').addEventListener('click', () => toast('Import', 'Select a CSV/XLS statement to upload', 'info'));
+</script>
+</body>
+</html>

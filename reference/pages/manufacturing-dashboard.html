@@ -1,0 +1,70 @@
+<!-- manufacturing-dashboard.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manufacturing Dashboard · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Manufacturing Dashboard</div>
+        <div class="page-subtitle">Production orders · capacity · OEE</div>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Active Orders</span></div><div class="kpi-value">3</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">OEE</span></div><div class="kpi-value">82.4%</div><span class="chip chip-success">Above target</span></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Machine Utilization</span></div><div class="kpi-value">76%</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Material Shortages</span></div><div class="kpi-value" style="color:var(--critical)">2</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Production Orders</div></div>
+      <div class="card-body" id="poWrap"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'Dashboard'], notifications });
+
+const orders = await api.getProductionOrders();
+document.getElementById('poWrap').innerHTML = dataTable({
+  columns: [
+    { label: 'Order', key: 'id', mono: true },
+    { label: 'Product', key: 'product' },
+    { label: 'Qty', key: 'qty', align: 'right', num: true },
+    { label: 'Progress', render: r => `<div class="progress" style="width:120px"><div class="progress-bar ${r.progress === 100 ? 'success' : ''}" style="width:${r.progress}%"></div></div>` },
+    { label: 'Due', render: r => fmtDate(r.due) },
+    { label: 'Status', render: r => {
+      const map = { Completed:'success', 'In Progress':'info', Planned:'neutral' };
+      return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+  ],
+  rows: orders
+});
+</script>
+</body>
+</html>

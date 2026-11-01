@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Purchase Dashboard · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Purchase Dashboard</div>
+        <div class="page-subtitle">PR · RFQ · PO · Vendors · Shortages</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" id="newPrBtn">New PR</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open PRs</span></div><div class="kpi-value">3</div><span class="chip chip-warning">Pending approval</span></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Active POs</span></div><div class="kpi-value">5</div><span class="chip chip-info">In transit</span></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Pending GRN</span></div><div class="kpi-value">2</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Shortages</span></div><div class="kpi-value" style="color:var(--critical)">7</div><span class="chip chip-critical">Action needed</span></div>
+    </div>
+
+    <div class="grid grid-charts" style="margin-top:var(--sp-5)">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Purchase Requisitions</div><button class="btn btn-ghost btn-sm" onclick="location.href='rfq-comparison.html'">View RFQ</button></div>
+        <div class="card-body" id="prTable"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Vendor Performance</div></div>
+        <div class="card-body" style="height:300px"><canvas id="vendorRatingH"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Recent Purchase Orders</div></div>
+      <div class="card-body" id="poTable"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import { barChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Dashboard'], notifications });
+
+const prs = await api.getPurchaseRequisitions();
+document.getElementById('prTable').innerHTML = dataTable({
+  columns: [
+    { label: 'PR', key: 'id', mono: true },
+    { label: 'Item', key: 'item' },
+    { label: 'Qty', key: 'qty', align: 'right', num: true },
+    { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+    { label: 'Status', render: r => r.status === 'Approved'
+        ? '<span class="chip chip-success">Approved</span>'
+        : '<span class="chip chip-warning">Pending</span>' },
+  ],
+  rows: prs
+});
+
+const pos = await api.getPurchaseOrders();
+document.getElementById('poTable').innerHTML = dataTable({
+  columns: [
+    { label: 'PO #', key: 'id', mono: true },
+    { label: 'Vendor', key: 'vendor' },
+    { label: 'Date', render: r => fmtDate(r.date) },
+    { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+    { label: 'Expected', render: r => fmtDate(r.expected) },
+    { label: 'Status', render: r => {
+      const map = { Approved: 'success', Sent: 'info', Draft: 'neutral', Pending: 'warning' };
+      return `<span class="chip chip-${map[r.status] || 'neutral'}">${r.status}</span>`;
+    }},
+  ],
+  rows: pos
+});
+
+const vendors = await api.getVendors();
+import { hBarChart } from '../js/charts.js';   // add at top with other chart imports
+// ...
+hBarChart('vendorRatingH', {
+  labels: vendors.map(v => v.name),
+  data: vendors.map(v => v.rating),
+  colors: ['#4F46E5','#06B6D4','#8B5CF6','#F59E0B']
+});
+document.getElementById('newPrBtn').addEventListener('click', () => toast('New Purchase Requisition', 'PR form opens in a modal', 'info'));
+</script>
+</body>
+</html>

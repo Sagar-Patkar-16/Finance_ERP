@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recruitment · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Recruitment</div>
+        <div class="page-subtitle">Requisitions · candidates · interviews · offers</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">New Opening</button></div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open Positions</span></div><div class="kpi-value">5</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Active Candidates</span></div><div class="kpi-value">42</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Interviews This Week</span></div><div class="kpi-value">11</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Offers Out</span></div><div class="kpi-value" style="color:var(--success)">3</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Open Requisitions</div></div>
+      <div class="card-body" id="reqTable"></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Candidate Pipeline</div></div>
+      <div class="card-body">
+        <div class="kanban">
+          ${['Applied','Screening','Interview','Offer','Hired'].map(stage => `
+            <div class="kanban-col">
+              <div class="kanban-col-header"><span>${stage}</span><span class="kanban-col-count">${Math.floor(Math.random()*8)+2}</span></div>
+              ${Array(Math.floor(Math.random()*2)+1).fill(0).map(() => `
+                <div class="kanban-card">
+                  <div class="title">Sample Candidate</div>
+                  <div class="meta"><span>2 yrs exp</span><span>${stage}</span></div>
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['HRMS', 'Recruitment'], notifications });
+
+document.getElementById('reqTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Req #', key: 'id', mono: true },
+    { label: 'Position', key: 'title' },
+    { label: 'Department', key: 'dept' },
+    { label: 'Positions', align: 'right', num: true, key: 'openings' },
+    { label: 'Candidates', align: 'right', num: true, key: 'candidates' },
+    { label: 'Posted', render: r => fmtDate(r.posted) },
+    { label: 'Priority', render: r => r.priority === 'High'
+        ? '<span class="chip chip-critical">High</span>'
+        : r.priority === 'Medium' ? '<span class="chip chip-warning">Medium</span>'
+        : '<span class="chip chip-info">Low</span>' },
+    { label: 'Status', render: r => `<span class="chip chip-info">${r.status}</span>` },
+  ],
+  rows: [
+    { id: 'REQ-101', title: 'Sr. Production Engineer', dept: 'Production',   openings: 2, candidates: 18, posted: '2026-08-05', priority: 'High',   status: 'Interviewing' },
+    { id: 'REQ-102', title: 'Sales Manager',           dept: 'Sales',        openings: 1, candidates: 12, posted: '2026-08-10', priority: 'High',   status: 'Screening' },
+    { id: 'REQ-103', title: 'Accounts Executive',      dept: 'Finance',      openings: 1, candidates: 8,  posted: '2026-08-12', priority: 'Medium', status: 'Interviewing' },
+    { id: 'REQ-104', title: 'Machine Operator',        dept: 'Production',   openings: 3, candidates: 22, posted: '2026-08-15', priority: 'Medium', status: 'Screening' },
+  ]
+});
+</script>
+</body>
+</html>

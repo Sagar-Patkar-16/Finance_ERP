@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Performance Management</div>
+        <div class="page-subtitle">KPIs · goals · appraisal cycle · 360° feedback</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">Start Appraisal</button></div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Appraisal Cycle</span></div><div class="kpi-value" style="font-size:20px">H1 FY27</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Reviews Pending</span></div><div class="kpi-value" style="color:var(--warning)">34</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Self-Reviews Done</span></div><div class="kpi-value" style="color:var(--success)">98</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Avg Rating</span></div><div class="kpi-value">3.8 / 5</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Employee Ratings</div></div>
+      <div class="card-body" id="perfTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['HRMS', 'Performance'], notifications });
+
+document.getElementById('perfTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Employee', key: 'name' },
+    { label: 'Department', key: 'dept' },
+    { label: 'Manager', key: 'mgr' },
+    { label: 'Self Review', render: r => r.self ? '<span class="chip chip-success">Done</span>' : '<span class="chip chip-warning">Pending</span>' },
+    { label: 'Manager Review', render: r => r.mgrDone ? '<span class="chip chip-success">Done</span>' : '<span class="chip chip-warning">Pending</span>' },
+    { label: 'Rating', align: 'right', num: true, render: r => r.rating ? `${r.rating} ★` : '—' },
+    { label: 'Band', render: r => {
+      if (!r.rating) return '—';
+      if (r.rating >= 4.5) return '<span class="chip chip-success">Outstanding</span>';
+      if (r.rating >= 4)   return '<span class="chip chip-info">Exceeds</span>';
+      if (r.rating >= 3)   return '<span class="chip chip-neutral">Meets</span>';
+      return '<span class="chip chip-warning">Needs Improvement</span>';
+    }},
+  ],
+  rows: [
+    { name: 'Rajesh Kumar', dept: 'Production', mgr: 'Priya Nair',  self: true,  mgrDone: true,  rating: 4.2 },
+    { name: 'Neha Singh',   dept: 'Sales',      mgr: 'Rahul Mehta', self: true,  mgrDone: false, rating: 4.6 },
+    { name: 'Arun Verma',   dept: 'Finance',    mgr: 'Anita Sharma',self: true,  mgrDone: true,  rating: 3.8 },
+    { name: 'Manoj Joshi',  dept: 'Production', mgr: 'Priya Nair',  self: false, mgrDone: false, rating: null },
+  ]
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3-Way Match · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">3-Way Match</div>
+        <div class="page-subtitle">PO ↔ GRN ↔ Invoice · automated verification before payment</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Run Batch Match</button>
+      </div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="stepper">
+      <div class="step done"><span class="step-dot">✓</span><span>PO Created</span></div>
+      <span class="step-sep">›</span>
+      <div class="step done"><span class="step-dot">✓</span><span>GRN Received</span></div>
+      <span class="step-sep">›</span>
+      <div class="step active"><span class="step-dot">3</span><span>Invoice Captured</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">4</span><span>Match &amp; Approve</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">5</span><span>Payment</span></div>
+    </div>
+
+    <!-- Match verdict banner -->
+    <div class="card" style="border-left:4px solid var(--critical)">
+      <div class="card-body" style="display:flex;align-items:center;gap:16px">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--critical-bg);color:var(--critical);display:grid;place-items:center;font-size:22px">!</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:16px">Match Failed — Price Variance Detected</div>
+          <div class="text-muted" style="font-size:13px">Invoice price on IT-100 exceeds PO price by ₹1,450 (2.9%). Approval required.</div>
+        </div>
+        <button class="btn btn-primary">Send for Approval</button>
+      </div>
+    </div>
+
+    <!-- Three-column comparison -->
+    <div class="grid grid-3" style="margin-top:var(--sp-5)">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Purchase Order</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">PO-2011 · Vendor A · 20 Aug 2026</div>
+          <table class="data-table">
+            <thead><tr><th>Item</th><th class="text-right">Qty</th><th class="text-right">Rate</th><th class="text-right">Amount</th></tr></thead>
+            <tbody>
+              <tr><td>IT-100 Steel Plate</td><td class="text-right num">500</td><td class="text-right num">₹100</td><td class="text-right num">₹50,000</td></tr>
+              <tr><td>IT-205 Aluminium</td><td class="text-right num">100</td><td class="text-right num">₹220</td><td class="text-right num">₹22,000</td></tr>
+              <tr><td colspan="3" class="text-right"><b>PO Total</b></td><td class="text-right num"><b>₹72,000</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Goods Receipt</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">GRN-2011 · Received 24 Aug 2026</div>
+          <table class="data-table">
+            <thead><tr><th>Item</th><th class="text-right">Recd</th><th class="text-right">Rate</th><th class="text-right">Amount</th></tr></thead>
+            <tbody>
+              <tr><td>IT-100 Steel Plate</td><td class="text-right num">500</td><td class="text-right num">₹100</td><td class="text-right num">₹50,000</td></tr>
+              <tr><td>IT-205 Aluminium</td><td class="text-right num">100</td><td class="text-right num">₹220</td><td class="text-right num">₹22,000</td></tr>
+              <tr><td colspan="3" class="text-right"><b>GRN Total</b></td><td class="text-right num"><b>₹72,000</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:var(--critical)">
+        <div class="card-header"><div class="card-title" style="color:var(--critical)">Vendor Invoice — Mismatch</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">VI-3001 · Vendor A · Dated 24 Aug</div>
+          <table class="data-table">
+            <thead><tr><th>Item</th><th class="text-right">Qty</th><th class="text-right">Rate</th><th class="text-right">Amount</th></tr></thead>
+            <tbody>
+              <tr><td>IT-100 Steel Plate</td><td class="text-right num">500</td><td class="text-right num" style="color:var(--critical);font-weight:600">₹102.9</td><td class="text-right num">₹51,450</td></tr>
+              <tr><td>IT-205 Aluminium</td><td class="text-right num">100</td><td class="text-right num">₹220</td><td class="text-right num">₹22,000</td></tr>
+              <tr><td colspan="3" class="text-right"><b>Invoice Total</b></td><td class="text-right num"><b>₹73,450</b></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:12px;padding:8px 12px;background:var(--critical-bg);border-radius:6px;font-size:12px;color:var(--critical)">
+            <b>Variance: +₹1,450 (2.9%)</b><br>Exceeds tolerance threshold of 2%.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-weight:600">Choose resolution</div>
+          <div class="text-muted" style="font-size:13px">All actions are logged in the audit trail</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" id="rejectBtn">Reject Invoice</button>
+          <button class="btn btn-secondary" id="holdBtn">Hold for Review</button>
+          <button class="btn btn-primary" id="approveBtn">Approve with Override</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { toast, confirmDialog } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', '3-Way Match'], notifications });
+
+document.getElementById('approveBtn').addEventListener('click', async () => {
+  const ok = await confirmDialog({
+    title: 'Approve with override?',
+    message: 'You are approving a ₹1,450 variance. This will be logged against your user ID in the audit trail.',
+    confirmText: 'Approve & log',
+    variant: 'danger',
+  });
+  if (ok) toast('Invoice approved', 'Override logged to audit trail', 'success');
+});
+document.getElementById('holdBtn').addEventListener('click', () => toast('Held for review', 'Invoice moved to exception queue', 'warning'));
+document.getElementById('rejectBtn').addEventListener('click', () => toast('Invoice rejected', 'Vendor will be notified', 'error'));
+</script>
+</body>
+</html>

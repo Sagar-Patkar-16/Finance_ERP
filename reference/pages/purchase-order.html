@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Purchase Orders · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Purchase Orders</div>
+        <div class="page-subtitle">Approval workflow · vendor acknowledgement · revision</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="exportBtn">Export</button>
+        <button class="btn btn-primary" id="newPoBtn">New PO</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open POs</span></div><div class="kpi-value">5</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Awaiting Approval</span></div><div class="kpi-value" style="color:var(--warning)">2</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Pending Receipt</span></div><div class="kpi-value">3</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">MTD Value</span></div><div class="kpi-value">₹29.3 L</div></div>
+    </div>
+
+    <div class="table-toolbar" style="margin-top:var(--sp-5)">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search PO #, vendor…" id="poSearch">
+      </div>
+      <select class="select" style="width:auto"><option>All statuses</option><option>Draft</option><option>Pending</option><option>Approved</option><option>Sent</option><option>Received</option></select>
+      <span class="spacer"></span>
+      <button class="btn btn-secondary" id="densityBtn">Comfortable</button>
+    </div>
+
+    <div id="poTableWrap"></div>
+  </main>
+</div>
+
+<!-- PO Detail Modal -->
+<div class="modal-backdrop" id="poModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <span class="modal-title" id="poModalTitle">PO Details</span>
+      <button class="btn-ghost btn-icon" data-close-modal aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" id="poModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close-modal>Close</button>
+      <button class="btn btn-primary" id="poApproveBtn">Approve</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate, toggleDensity } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, confirmDialog, openModal, closeModal, statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Purchase Orders'], notifications });
+
+const pos = await api.getPurchaseOrders();
+
+function render(filter = '') {
+  const f = filter.toLowerCase();
+  const rows = pos.filter(p => !f || JSON.stringify(p).toLowerCase().includes(f));
+  document.getElementById('poTableWrap').innerHTML = dataTable({
+    columns: [
+      { label: 'PO #', key: 'id', mono: true },
+      { label: 'Vendor', key: 'vendor' },
+      { label: 'Date', render: r => fmtDate(r.date) },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Expected', render: r => fmtDate(r.expected) },
+      { label: 'Status', render: r => {
+        const map = { Approved: 'success', Sent: 'info', Draft: 'neutral', Pending: 'warning', Received: 'success' };
+        return `<span class="chip chip-${map[r.status] || 'neutral'}">${r.status}</span>`;
+      }},
+      { label: '', render: r => `<button class="btn btn-ghost btn-sm" data-view="${r.id}">View</button>` },
+    ],
+    rows
+  });
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => openPoModal(btn.dataset.view));
+  });
+}
+render();
+
+function openPoModal(id) {
+  const po = pos.find(p => p.id === id);
+  if (!po) return;
+  document.getElementById('poModalTitle').textContent = `${po.id} · ${po.vendor}`;
+  document.getElementById('poModalBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Date</div><div style="font-weight:600">${fmtDate(po.date)}</div></div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Expected</div><div style="font-weight:600">${fmtDate(po.expected)}</div></div>
+      <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Status</div>${statusChip(po.status === 'Approved' ? 'success' : po.status === 'Pending' ? 'warning' : 'info', po.status)}</div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Item</th><th class="text-right">Qty</th><th class="text-right">Rate</th><th class="text-right">Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Steel Plate 5mm</td><td class="text-right num">500</td><td class="text-right num">₹${po.amount/500}</td><td class="text-right num">${fmtCurrencyINR(po.amount)}</td></tr>
+        <tr><td colspan="3" class="text-right"><b>Total</b></td><td class="text-right num"><b>${fmtCurrencyINR(po.amount)}</b></td></tr>
+      </tbody>
+    </table>`;
+  openModal('poModal');
+  document.getElementById('poApproveBtn').onclick = async () => {
+    const ok = await confirmDialog({ title: `Approve ${po.id}?`, message: 'This will trigger vendor notification and GRN creation.', confirmText: 'Approve' });
+    if (ok) {
+      po.status = 'Approved';
+      closeModal('poModal');
+      render();
+      toast('PO approved', `${po.id} approved successfully`, 'success');
+    }
+  };
+}
+
+document.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', () => closeModal('poModal')));
+document.getElementById('poModal').addEventListener('click', e => {
+  if (e.target.id === 'poModal') closeModal('poModal');
+});
+
+document.getElementById('poSearch').addEventListener('input', e => render(e.target.value));
+document.getElementById('densityBtn').addEventListener('click', e => {
+  const next = toggleDensity();
+  e.target.textContent = next.charAt(0).toUpperCase() + next.slice(1);
+});
+document.getElementById('exportBtn').addEventListener('click', () => toast('Export queued', 'PO register will be emailed', 'info'));
+document.getElementById('newPoBtn').addEventListener('click', () => toast('New Purchase Order', 'PO form opens here', 'info'));
+</script>
+</body>
+</html>

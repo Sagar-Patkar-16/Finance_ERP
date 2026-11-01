@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Users · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Users</div>
+        <div class="page-subtitle">Accounts · roles · status · sessions</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Import Users</button>
+        <button class="btn btn-primary">Invite User</button>
+      </div>
+    </div>
+
+    <div class="table-toolbar">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search name, email…" id="uSearch">
+      </div>
+      <select class="select" style="width:auto"><option>All roles</option><option>CEO</option><option>CFO</option><option>Purchase Manager</option></select>
+      <select class="select" style="width:auto"><option>All statuses</option><option>Active</option><option>Suspended</option><option>Invited</option></select>
+    </div>
+
+    <div id="userTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, initials } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Administration', 'Users'], notifications });
+
+const users = [
+  { name: 'Rahul Mehta',  email: 'ceo@acme.com',       role: 'CEO',              status: 'Active',    lastLogin: '2026-08-24 08:15' },
+  { name: 'Anita Sharma', email: 'cfo@acme.com',       role: 'CFO',              status: 'Active',    lastLogin: '2026-08-24 09:02' },
+  { name: 'Vikram Rao',   email: 'purchase@acme.com',  role: 'Purchase Manager', status: 'Active',    lastLogin: '2026-08-24 09:30' },
+  { name: 'Suresh Kumar', email: 'warehouse@acme.com', role: 'Warehouse Manager',status: 'Active',    lastLogin: '2026-08-24 08:45' },
+  { name: 'Priya Nair',   email: 'production@acme.com',role: 'Production Manager',status: 'Active',   lastLogin: '2026-08-23 17:20' },
+  { name: 'Kavita Iyer',  email: 'hr@acme.com',        role: 'HR Manager',       status: 'Active',    lastLogin: '2026-08-24 10:12' },
+  { name: 'New Joiner',   email: 'new@acme.com',       role: 'Purchase Executive',status: 'Invited',  lastLogin: '—' },
+];
+
+document.getElementById('userTable').innerHTML = dataTable({
+  columns: [
+    { label: '', render: r => `<div class="avatar" style="width:30px;height:30px;font-size:11px">${initials(r.name)}</div>` },
+    { label: 'Name', key: 'name' },
+    { label: 'Email', key: 'email', mono: true },
+    { label: 'Role', render: r => `<span class="chip chip-info">${r.role}</span>` },
+    { label: 'Status', render: r => {
+        const map = { Active: 'success', Invited: 'warning', Suspended: 'critical' };
+        return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+      }},
+    { label: 'Last Login', key: 'lastLogin', mono: true },
+    { label: '', render: r => `
+        <button class="btn btn-ghost btn-sm">Edit</button>
+        ${r.status === 'Active' ? `<button class="btn btn-ghost btn-sm" data-susp="${r.email}">Suspend</button>` : ''}
+      ` },
+  ],
+  rows: users
+});
+
+document.getElementById('userTable').addEventListener('click', e => {
+  const b = e.target.closest('[data-susp]');
+  if (b) toast('User suspended', `${b.dataset.susp}`, 'warning');
+});
+</script>
+</body>
+</html>

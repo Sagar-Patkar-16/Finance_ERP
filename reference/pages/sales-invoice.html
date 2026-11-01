@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sales Invoices · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sales Invoices</div>
+        <div class="page-subtitle">Customer billing · e-invoice · reminders</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Bulk Reminder</button>
+        <button class="btn btn-primary">New Invoice</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Invoiced MTD</span></div><div class="kpi-value">₹92.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Collected MTD</span></div><div class="kpi-value" style="color:var(--success)">₹68.2 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Overdue</span></div><div class="kpi-value" style="color:var(--critical)">₹12.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">DSO</span></div><div class="kpi-value">34 days</div></div>
+    </div>
+
+    <div class="table-toolbar" style="margin-top:var(--sp-5)">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search INV #, customer…" id="invSearch">
+      </div>
+      <select class="select" style="width:auto"><option>All statuses</option><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select>
+    </div>
+
+    <div id="invTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Sales & CRM', 'Sales Invoices'], notifications });
+
+const invoices = await api.getInvoices();
+const enriched = invoices.concat([
+  { id: 'INV-3025', customer: 'DEF Tools', amount: 145000, due: '2026-08-25', status: 'Overdue', days: -3 },
+  { id: 'INV-3026', customer: 'LMN Pharma', amount: 2200000, due: '2026-09-15', status: 'Sent', days: 22 },
+]);
+
+function render(filter = '') {
+  const f = filter.toLowerCase();
+  const rows = enriched.filter(i => !f || JSON.stringify(i).toLowerCase().includes(f));
+  document.getElementById('invTable').innerHTML = dataTable({
+    columns: [
+      { label: 'Invoice #', key: 'id', mono: true },
+      { label: 'Customer', key: 'customer' },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Due', render: r => fmtDate(r.due) },
+      { label: 'Status', render: r => {
+        const map = { Paid: 'success', Pending: 'attention', Sent: 'info', Overdue: 'critical' };
+        return `<span class="chip chip-${map[r.status] || 'neutral'}">${r.status}</span>`;
+      }},
+      { label: '', render: r => `
+        <button class="btn btn-ghost btn-sm">View</button>
+        ${r.status !== 'Paid' ? `<button class="btn btn-secondary btn-sm" data-remind="${r.id}">Remind</button>` : ''}
+      ` },
+    ],
+    rows
+  });
+  document.querySelectorAll('[data-remind]').forEach(b => b.addEventListener('click', () => {
+    toast('Reminder sent', `Payment reminder emailed to ${b.dataset.remind}`, 'success');
+  }));
+}
+render();
+document.getElementById('invSearch').addEventListener('input', e => render(e.target.value));
+</script>
+</body>
+</html>

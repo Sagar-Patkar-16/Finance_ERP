@@ -1,0 +1,86 @@
+<!-- inventory-dashboard.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Dashboard · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Inventory Dashboard</div>
+        <div class="page-subtitle">Stock value · low stock · warehouse utilization</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">Adjust Stock</button></div>
+    </div>
+
+    <div class="grid grid-kpi" id="invKpi"></div>
+
+    <div class="grid grid-charts" style="margin-top:var(--sp-5)">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Items Below Safety Stock</div></div>
+        <div class="card-body" id="lowStockTable"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Stock Value by Category</div></div>
+        <div class="card-body" style="height:320px"><canvas id="stockCat"></canvas></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth, fmtCurrencyINR } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { kpiCard, dataTable } from '../js/components.js';
+import { doughnutChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Inventory', 'Dashboard'], notifications });
+
+const items = await api.getItems();
+const totalValue = items.reduce((s, i) => s + i.value, 0);
+const belowSafety = items.filter(i => i.stock < i.safety);
+
+document.getElementById('invKpi').innerHTML = [
+  { label: 'Total Inventory Value', value: totalValue, delta: +1.8, icon: 'package' },
+  { label: 'Items Tracked', value: items.length, delta: 0, icon: 'layers', currency: false },
+  { label: 'Below Safety Stock', value: belowSafety.length, delta: null, icon: 'alert-triangle', currency: false },
+  { label: 'Warehouse Utilization', value: 68, delta: +3.2, icon: 'building', currency: false, unit: '%' },
+].map(k => kpiCard(k)).join('');
+
+document.getElementById('lowStockTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Item', key: 'code', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'On Hand', key: 'stock', align: 'right', num: true },
+    { label: 'Safety',  key: 'safety', align: 'right', num: true },
+    { label: 'Gap', align: 'right', num: true, render: r => `<span style="color:var(--critical)">${r.stock - r.safety}</span>` },
+  ],
+  rows: belowSafety
+});
+
+doughnutChart('stockCat', {
+  labels: ['Raw Material', 'Component', 'Packaging'],
+  data: [1310000, 495000, 210000],
+  colors: ['#4F46E5','#06B6D4','#8B5CF6']
+});
+</script>
+</body>
+</html>

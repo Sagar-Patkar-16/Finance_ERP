@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Settings · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">System Settings</div>
+        <div class="page-subtitle">Company profile · defaults · notifications · localization</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary" id="saveBtn">Save Changes</button></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="company">Company</div>
+      <div class="tab" data-tab="defaults">Defaults</div>
+      <div class="tab" data-tab="notif">Notifications</div>
+      <div class="tab" data-tab="local">Localization</div>
+    </div>
+
+    <div class="tab-panel active" data-panel="company">
+      <div class="card">
+        <div class="card-body">
+          <div class="grid grid-2">
+            <div class="field"><label>Legal Name</label><input class="input" value="Acme Industries Pvt Ltd"></div>
+            <div class="field"><label>Display Name</label><input class="input" value="Acme HQ"></div>
+            <div class="field"><label>GSTIN</label><input class="input mono" value="27AAACA1234B1Z5"></div>
+            <div class="field"><label>PAN</label><input class="input mono" value="AAACA1234B"></div>
+            <div class="field"><label>CIN</label><input class="input mono" value="U29100PN2018PTC123456"></div>
+            <div class="field"><label>Financial Year Start</label><input class="input" type="date" value="2026-04-01"></div>
+          </div>
+          <div class="field"><label>Registered Address</label><textarea class="textarea">Plot 42, Industrial Estate, Pune, MH 411018</textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="defaults">
+      <div class="card">
+        <div class="card-body">
+          <div class="grid grid-2">
+            <div class="field"><label>Default Currency</label><select class="select"><option>INR</option><option>USD</option><option>EUR</option></select></div>
+            <div class="field"><label>Default Payment Terms</label><select class="select"><option>Net 30</option><option>Net 45</option><option>Net 60</option></select></div>
+            <div class="field"><label>Valuation Method</label><select class="select"><option>FIFO</option><option>Weighted Average</option></select></div>
+            <div class="field"><label>Approval Threshold (PO)</label><input class="input" value="₹10,00,000"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="notif">
+      <div class="card">
+        <div class="card-body">
+          ${[
+            ['Critical alerts — email', true],
+            ['Critical alerts — push', true],
+            ['Daily digest — 8 AM',    true],
+            ['Weekly summary — Monday',false],
+            ['AI Copilot proactive insights', true],
+          ].map(([label, on]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:14px">${label}</span>
+              <label class="segmented" style="cursor:pointer">
+                <input type="checkbox" ${on ? 'checked' : ''} style="display:none">
+                <span class="chip chip-${on ? 'success' : 'neutral'}">${on ? 'On' : 'Off'}</span>
+              </label>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="local">
+      <div class="card">
+        <div class="card-body">
+          <div class="grid grid-2">
+            <div class="field"><label>Language</label><select class="select"><option>English (India)</option><option>हिन्दी</option></select></div>
+            <div class="field"><label>Timezone</label><select class="select"><option>Asia/Kolkata (IST)</option></select></div>
+            <div class="field"><label>Date Format</label><select class="select"><option>DD MMM YYYY</option><option>YYYY-MM-DD</option></select></div>
+            <div class="field"><label>Number Format</label><select class="select"><option>Indian (1,23,456)</option><option>Western (123,456)</option></select></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { initTabs, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Administration', 'System Settings'], notifications });
+
+initTabs();
+document.getElementById('saveBtn').addEventListener('click', () => toast('Settings saved', 'Changes applied across all modules', 'success'));
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!-- admin-roles.html (RBAC §8) -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roles & Permissions · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Roles & Permissions</div>
+        <div class="page-subtitle">Role-Based Access Control (RBAC) — §8</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">Add Role</button></div>
+    </div>
+
+    <div id="rolesWrap"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Administration', 'Roles'], notifications });
+
+const rows = [
+  { role: 'Purchase Executive', can: 'Create PR, RFQ; view vendors', cannot: 'Approve PO; modify payment; post journal' },
+  { role: 'Purchase Manager',   can: 'Approve PR, PO; view purchasing analytics', cannot: '—' },
+  { role: 'CFO',                can: 'Approve high-value PO, payments; view financial reports', cannot: '—' },
+  { role: 'CEO',                can: 'All modules (read); approve >₹50L', cannot: 'Directly post journal entries' },
+];
+
+document.getElementById('rolesWrap').innerHTML = dataTable({
+  columns: [
+    { label: 'Role', key: 'role' },
+    { label: 'Can', key: 'can' },
+    { label: 'Cannot', key: 'cannot' },
+    { label: '', render: r => `<button class="btn btn-secondary btn-sm" data-edit="${r.role}">Edit</button>` },
+  ],
+  rows
+});
+
+document.getElementById('rolesWrap').addEventListener('click', e => {
+  const btn = e.target.closest('[data-edit]');
+  if (btn) toast('Edit role', `Permissions for ${btn.dataset.edit}`, 'info');
+});
+</script>
+</body>
+</html>

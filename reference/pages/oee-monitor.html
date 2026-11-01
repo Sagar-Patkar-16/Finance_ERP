@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OEE Monitor · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">OEE Monitor</div>
+        <div class="page-subtitle">Availability × Performance × Quality</div>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Overall OEE</span></div><div class="kpi-value" style="color:var(--success)">82.4%</div><div class="kpi-delta up">+2.1% vs last week</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Availability</span></div><div class="kpi-value">91.2%</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Performance</span></div><div class="kpi-value">92.8%</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Quality</span></div><div class="kpi-value">96.4%</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">OEE by Work Center</div></div>
+      <div class="card-body" style="height:360px"><canvas id="oeeChart"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Downtime Reasons (this week)</div></div>
+      <div class="card-body" id="dtTable"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { barChart } from '../js/charts.js';
+import { dataTable } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'OEE Monitor'], notifications });
+
+barChart('oeeChart', {
+  labels: ['WC-01', 'WC-02', 'WC-03', 'WC-04', 'WC-05'],
+  datasets: [
+    { label: 'Availability', data: [92, 88, 94, 90, 92], color: '#4F46E5' },
+    { label: 'Performance',  data: [94, 90, 96, 89, 95], color: '#06B6D4' },
+    { label: 'Quality',      data: [97, 95, 98, 96, 96], color: '#10B981' },
+  ]
+});
+
+document.getElementById('dtTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Reason', key: 'reason' },
+    { label: 'Machine', key: 'machine', mono: true },
+    { label: 'Hours', align: 'right', num: true, key: 'hours' },
+    { label: 'Impact', render: r => `<span style="color:${r.hours > 4 ? 'var(--critical)' : r.hours > 2 ? 'var(--warning)' : 'var(--text-muted)'}">${r.hours > 4 ? 'High' : r.hours > 2 ? 'Medium' : 'Low'}</span>` },
+  ],
+  rows: [
+    { reason: 'Unplanned maintenance', machine: 'MCH-004', hours: 5.5 },
+    { reason: 'Material shortage',     machine: 'WC-03',    hours: 3.0 },
+    { reason: 'Operator break',        machine: 'WC-01',    hours: 1.5 },
+    { reason: 'Setup changeover',      machine: 'WC-02',    hours: 2.5 },
+  ]
+});
+</script>
+</body>
+</html>

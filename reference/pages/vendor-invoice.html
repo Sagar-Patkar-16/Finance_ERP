@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor Invoices · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Vendor Invoices</div>
+        <div class="page-subtitle">Capture → match → approve → pay</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Bulk Import</button>
+        <button class="btn btn-primary">Record Invoice</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open Invoices</span></div><div class="kpi-value">6</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Matched (3-Way)</span></div><div class="kpi-value" style="color:var(--success)">4</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Exceptions</span></div><div class="kpi-value" style="color:var(--critical)">2</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Awaiting Approval</span></div><div class="kpi-value" style="color:var(--warning)">3</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-body" id="viTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Vendor Invoices'], notifications });
+
+const invoices = [
+  { id: 'VI-3001', vendor: 'Vendor A', po: 'PO-2011', grn: 'GRN-2011', amount: 480000, due: '2026-08-27', match: '3-Way', status: 'Approved' },
+  { id: 'VI-3002', vendor: 'Vendor C', po: 'PO-2012', grn: 'GRN-2012', amount: 1250000, due: '2026-09-01', match: '3-Way', status: 'Pending' },
+  { id: 'VI-3003', vendor: 'Vendor B', po: 'PO-2013', grn: '—', amount: 320000, due: '2026-09-05', match: '2-Way', status: 'Exception' },
+  { id: 'VI-3004', vendor: 'Vendor A', po: 'PO-2014', grn: 'GRN-2013', amount: 780000, due: '2026-08-30', match: '3-Way', status: 'Approved' },
+  { id: 'VI-3005', vendor: 'Vendor D', po: 'PO-2015', grn: 'GRN-2014', amount: 95000, due: '2026-09-02', match: 'Failed', status: 'Exception' },
+];
+
+document.getElementById('viTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Invoice', key: 'id', mono: true },
+    { label: 'Vendor', key: 'vendor' },
+    { label: 'PO', key: 'po', mono: true },
+    { label: 'GRN', key: 'grn', mono: true },
+    { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+    { label: 'Due', render: r => fmtDate(r.due) },
+    { label: 'Match', render: r => {
+      const map = { '3-Way': 'success', '2-Way': 'info', Failed: 'critical' };
+      return `<span class="chip chip-${map[r.match]}">${r.match}</span>`;
+    }},
+    { label: 'Status', render: r => {
+      const map = { Approved: 'success', Pending: 'warning', Exception: 'critical' };
+      return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+    { label: '', render: () => '<button class="btn btn-ghost btn-sm">View</button>' },
+  ],
+  rows: invoices
+});
+</script>
+</body>
+</html>

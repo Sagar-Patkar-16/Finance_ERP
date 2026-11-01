@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixed Assets · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Fixed Assets</div>
+        <div class="page-subtitle">Asset register · depreciation · capitalization · disposal</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="exportBtn">Export Register</button>
+        <button class="btn btn-primary" id="newAssetBtn">Capitalize Asset</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Gross Block</span><span class="kpi-icon">📦</span></div><div class="kpi-value">₹18.4 Cr</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Accumulated Dep.</span></div><div class="kpi-value" style="color:var(--warning)">−₹6.2 Cr</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Net Block</span></div><div class="kpi-value">₹12.2 Cr</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Assets on Register</span></div><div class="kpi-value">248</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header">
+        <div class="card-title">Depreciation Forecast</div>
+        <div class="segmented">
+          <button class="active">SLM</button>
+          <button>WDV</button>
+        </div>
+      </div>
+      <div class="card-body" style="height:300px"><canvas id="depChart"></canvas></div>
+    </div>
+
+    <div class="table-toolbar" style="margin-top:var(--sp-5)">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search assets…" id="assetSearch">
+      </div>
+      <select class="select" style="width:auto"><option>All categories</option><option>Plant &amp; Machinery</option><option>Buildings</option><option>Vehicles</option><option>IT Equipment</option></select>
+      <select class="select" style="width:auto"><option>All locations</option><option>Pune HQ</option><option>Mumbai Plant</option></select>
+    </div>
+
+    <div id="assetTable"></div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import { lineChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Finance', 'Fixed Assets'], notifications });
+
+const assets = [
+  { id: 'FA-0001', name: 'CNC Milling Machine',      category: 'Plant & Machinery', loc: 'Pune HQ',   cost: 4800000,  dep: 1440000, nbv: 3360000, life: 10, acquired: '2022-04-15', custodian: 'R. Kumar' },
+  { id: 'FA-0002', name: 'Industrial Lathe',         category: 'Plant & Machinery', loc: 'Pune HQ',   cost: 2200000,  dep: 880000,  nbv: 1320000, life: 10, acquired: '2021-09-20', custodian: 'M. Joshi' },
+  { id: 'FA-0003', name: 'Warehouse Building Block A',category:'Buildings',         loc: 'Pune HQ',   cost: 8400000,  dep: 2100000, nbv: 6300000, life: 30, acquired: '2018-03-01', custodian: 'Facilities' },
+  { id: 'FA-0004', name: 'Forklift Toyota 8FBMT30',  category: 'Vehicles',          loc: 'Mumbai Plant', cost: 1800000, dep: 540000, nbv: 1260000, life: 8,  acquired: '2023-01-10', custodian: 'S. Kumar' },
+  { id: 'FA-0005', name: 'Server Rack & UPS',        category: 'IT Equipment',      loc: 'Pune HQ',   cost: 620000,   dep: 248000,  nbv: 372000,  life: 5,  acquired: '2024-02-05', custodian: 'IT Dept' },
+  { id: 'FA-0006', name: 'Air Compressor 50HP',      category: 'Plant & Machinery', loc: 'Mumbai Plant', cost: 1450000, dep: 483000,  nbv: 967000,  life: 12, acquired: '2023-06-12', custodian: 'P. Nair' },
+];
+
+function render(filter = '') {
+  const f = filter.toLowerCase();
+  const rows = assets.filter(a => !f || JSON.stringify(a).toLowerCase().includes(f));
+  document.getElementById('assetTable').innerHTML = dataTable({
+    columns: [
+      { label: 'Asset #', key: 'id', mono: true },
+      { label: 'Name', key: 'name' },
+      { label: 'Category', key: 'category' },
+      { label: 'Location', key: 'loc' },
+      { label: 'Cost', align: 'right', num: true, render: r => fmtCurrencyINR(r.cost) },
+      { label: 'Depreciation', align: 'right', num: true, render: r => fmtCurrencyINR(r.dep) },
+      { label: 'NBV', align: 'right', num: true, render: r => `<b>${fmtCurrencyINR(r.nbv)}</b>` },
+      { label: 'Life', align: 'right', num: true, render: r => `${r.life}y` },
+      { label: 'Custodian', key: 'custodian' },
+      { label: '', render: () => `<button class="btn btn-ghost btn-sm">View</button>` },
+    ],
+    rows
+  });
+}
+render();
+
+document.getElementById('assetSearch').addEventListener('input', e => render(e.target.value));
+
+lineChart('depChart', {
+  labels: ['FY23','FY24','FY25','FY26','FY27','FY28'],
+  datasets: [{ label: 'Net Block (₹ Cr)', data: [16.8, 15.2, 13.8, 12.2, 10.6, 9.2], color: getComputedStyle(document.documentElement).getPropertyValue('--chart-1'), fill: true }]
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => toast('Export queued', 'Fixed asset register will be emailed', 'info'));
+document.getElementById('newAssetBtn').addEventListener('click', () => toast('Capitalize Asset', 'Asset form opens here', 'info'));
+</script>
+</body>
+</html>

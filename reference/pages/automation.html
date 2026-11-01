@@ -1,0 +1,82 @@
+<!-- automation.html (WHEN / IF / THEN builder) -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automation · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">No-Code Workflow Automation</div>
+        <div class="page-subtitle">WHEN / IF / THEN rules across all modules</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary" id="addRule">New Rule</button></div>
+    </div>
+
+    <div id="ruleList"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Intelligence', 'Automation'], notifications });
+
+const rules = [
+  { id: 1, when: 'Invoice > ₹10,00,000', if_: 'Customer credit limit exceeded', then: 'Send approval request to CFO', active: true },
+  { id: 2, when: 'Stock < Reorder Level', then: 'Create Purchase Requisition', active: true },
+  { id: 3, when: 'Employee certification expires in 30 days', then: 'Notify HR + Employee', active: true },
+  { id: 4, when: 'Vendor invoice ≠ PO price', then: 'Create Invoice Exception', active: false },
+];
+
+function render() {
+  document.getElementById('ruleList').innerHTML = rules.map(r => `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-body" style="display:flex;align-items:center;gap:16px">
+        <div style="flex:1">
+          <div style="display:flex;gap:8px;font-size:13px;flex-wrap:wrap">
+            <span class="chip chip-info">WHEN</span> <span>${r.when}</span>
+            ${r.if_ ? `<span class="chip chip-attention">IF</span> <span>${r.if_}</span>` : ''}
+            <span class="chip chip-success">THEN</span> <span>${r.then}</span>
+          </div>
+        </div>
+        <label class="segmented" style="cursor:pointer">
+          <input type="checkbox" ${r.active ? 'checked' : ''} data-toggle="${r.id}" style="display:none">
+          <span class="chip chip-${r.active ? 'success' : 'neutral'}">${r.active ? 'Active' : 'Paused'}</span>
+        </label>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('change', e => {
+      const r = rules.find(x => x.id === +e.target.dataset.toggle);
+      r.active = e.target.checked;
+      toast(r.active ? 'Rule activated' : 'Rule paused', '', r.active ? 'success' : 'info');
+      render();
+    });
+  });
+}
+render();
+
+document.getElementById('addRule').addEventListener('click', () => toast('New rule', 'Builder UI opens here', 'info'));
+</script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer 360° · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Customer 360°</div>
+        <div class="page-subtitle">Full profile of a customer across all modules</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="exportBtn">Export</button>
+        <button class="btn btn-primary" id="newOrderBtn">New Order</button>
+      </div>
+    </div>
+
+    <!-- Customer selector -->
+    <div class="table-toolbar">
+      <div class="input-search" style="max-width:340px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <select class="input" id="customerSelect"></select>
+      </div>
+    </div>
+
+    <!-- 360° header -->
+    <div class="entity-header" id="entityHeader"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="overview">Overview</div>
+      <div class="tab" data-tab="contacts">Contacts</div>
+      <div class="tab" data-tab="orders">Orders</div>
+      <div class="tab" data-tab="invoices">Invoices</div>
+      <div class="tab" data-tab="payments">Payments</div>
+      <div class="tab" data-tab="complaints">Complaints</div>
+    </div>
+
+    <div class="tab-panel active" data-panel="overview">
+      <div class="grid grid-charts">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Sales Trend</div></div>
+          <div class="card-body" style="height:300px"><canvas id="custTrend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Top Products</div></div>
+          <div class="card-body" style="height:300px"><canvas id="custProducts"></canvas></div>
+        </div>
+      </div>
+      <div class="grid grid-3" style="margin-top:var(--sp-5)">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Orders</div></div>
+          <div class="card-body" id="recentOrders"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Invoices</div></div>
+          <div class="card-body" id="recentInvoices"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Payment History</div></div>
+          <div class="card-body" id="paymentHistory"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="contacts">
+      <div class="card"><div class="card-body" id="contactsBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="orders">
+      <div class="card"><div class="card-body" id="ordersBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="invoices">
+      <div class="card"><div class="card-body" id="invoicesBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="payments">
+      <div class="card"><div class="card-body"><div class="empty"><div class="empty-title">No payments recorded yet</div></div></div></div>
+    </div>
+    <div class="tab-panel" data-panel="complaints">
+      <div class="card"><div class="card-body"><div class="empty"><div class="empty-title">No complaints on record</div></div></div></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, dataTable, initTabs, toast } from '../js/components.js';
+import { lineChart, doughnutChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Sales & CRM', 'Customer 360°'], notifications });
+
+const customers = await api.getCustomers();
+const sel = document.getElementById('customerSelect');
+sel.innerHTML = customers.map(c => `<option value="${c.id}">${c.name} (${c.id})</option>`).join('');
+
+function render(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('entityHeader').innerHTML = `
+    <div class="entity-title-row">
+      <div class="entity-avatar">${c.name.slice(0,1)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="entity-name">${c.name}</div>
+        <div class="entity-meta">${c.id} · GST: ${c.gst} · ${c.contact}</div>
+      </div>
+      <div>${c.status === 'Active' ? '<span class="chip chip-success">Active</span>' : '<span class="chip chip-neutral">Dormant</span>'}</div>
+    </div>
+    <div class="entity-stats">
+      <div class="entity-stat"><span class="label">Revenue</span><span class="value">${fmtCurrencyINR(c.revenue)}</span></div>
+      <div class="entity-stat"><span class="label">Outstanding</span><span class="value">${fmtCurrencyINR(c.outstanding)}</span></div>
+      <div class="entity-stat"><span class="label">Orders</span><span class="value">${c.orders}</span></div>
+      <div class="entity-stat"><span class="label">Avg Payment</span><span class="value">${c.avgPaymentDays} Days</span></div>
+      <div class="entity-stat"><span class="label">Credit Limit</span><span class="value">${fmtCurrencyINR(c.creditLimit)}</span></div>
+    </div>`;
+
+  document.getElementById('recentOrders').innerHTML = `
+    <div style="font-size:13px">SO-1043 · ₹4,80,000 · Confirmed</div>
+    <div style="font-size:13px;margin-top:8px">SO-1042 · ₹2,20,000 · Delivered</div>
+    <div style="font-size:13px;margin-top:8px">SO-1041 · ₹1,85,000 · Invoiced</div>`;
+
+  document.getElementById('recentInvoices').innerHTML = `
+    <div style="font-size:13px">INV-3021 · ₹8,50,000 · Pending</div>
+    <div style="font-size:13px;margin-top:8px">INV-3018 · ₹3,20,000 · Paid</div>
+    <div style="font-size:13px;margin-top:8px">INV-3015 · ₹5,40,000 · Paid</div>`;
+
+  document.getElementById('paymentHistory').innerHTML = `
+    <div style="font-size:13px">12 Aug 2026 · ₹4,00,000 · NEFT</div>
+    <div style="font-size:13px;margin-top:8px">28 Jul 2026 · ₹6,20,000 · RTGS</div>
+    <div style="font-size:13px;margin-top:8px">14 Jul 2026 · ₹3,10,000 · UPI</div>`;
+
+  document.getElementById('contactsBody').innerHTML = `
+    <div style="display:grid;gap:12px">
+      <div><b>Primary contact</b><br>${c.contact} · ${c.phone}<br><a href="mailto:${c.email}">${c.email}</a></div>
+      <div><b>Billing address</b><br>Plot 42, Industrial Estate, Pune 411018</div>
+      <div><b>Shipping address</b><br>Same as billing</div>
+    </div>`;
+
+  document.getElementById('ordersBody').innerHTML = dataTable({
+    columns: [
+      { label: 'SO #', key: 'id' },
+      { label: 'Date', key: 'date' },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Status', render: r => `<span class="chip chip-neutral">${r.status}</span>` },
+    ],
+    rows: [
+      { id: 'SO-1043', date: '2026-08-20', amount: 480000, status: 'Confirmed' },
+      { id: 'SO-1042', date: '2026-08-12', amount: 220000, status: 'Delivered' },
+      { id: 'SO-1041', date: '2026-08-02', amount: 185000, status: 'Invoiced' },
+    ]
+  });
+
+  document.getElementById('invoicesBody').innerHTML = dataTable({
+    columns: [
+      { label: 'Invoice #', key: 'id' },
+      { label: 'Due', key: 'due' },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Status', render: r => r.status === 'Pending'
+          ? '<span class="chip chip-attention">Pending</span>'
+          : '<span class="chip chip-success">Paid</span>' },
+    ],
+    rows: [
+      { id: 'INV-3021', due: '2026-09-05', amount: 850000, status: 'Pending' },
+      { id: 'INV-3018', due: '2026-08-10', amount: 320000, status: 'Paid' },
+      { id: 'INV-3015', due: '2026-07-28', amount: 540000, status: 'Paid' },
+    ]
+  });
+
+  // charts
+  lineChart('custTrend', {
+    labels: ['Mar','Apr','May','Jun','Jul','Aug'],
+    datasets: [{ label: 'Sales', data: [3.2,3.8,4.2,4.0,4.5,4.8], color: getComputedStyle(document.documentElement).getPropertyValue('--chart-1'), fill: true }]
+  });
+  doughnutChart('custProducts', {
+    labels: ['Pump Assembly A', 'Motor Frame B', 'Bracket C'],
+    data: [55, 28, 17],
+    colors: ['#4F46E5','#06B6D4','#8B5CF6']
+  });
+}
+
+render(sel.value);
+sel.addEventListener('change', e => render(e.target.value));
+initTabs();
+
+document.getElementById('exportBtn').addEventListener('click', () => toast('Export queued', 'You will receive a download link by email.', 'info'));
+document.getElementById('newOrderBtn').addEventListener('click', () => location.href = 'sales-order.html');
+</script>
+</body>
+</html>

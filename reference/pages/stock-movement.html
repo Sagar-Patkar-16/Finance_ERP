@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock Movement · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Stock Movement</div>
+        <div class="page-subtitle">All inventory transactions, newest first</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="transferBtn">Transfer</button>
+        <button class="btn btn-primary" id="adjustBtn">Adjust</button>
+      </div>
+    </div>
+    <div id="movementTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate, fmtNumber } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Inventory', 'Stock Movement'], notifications });
+
+const rows = [
+  { date: '2026-08-24', ref: 'GRN-2011', type: 'Receipt', item: 'IT-100 · Steel Plate', qty: +250, bin: 'A-12-B-01', by: 'Suresh K' },
+  { date: '2026-08-23', ref: 'SO-1043', type: 'Issue',   item: 'IT-205 · Aluminium', qty: -120, bin: 'A-12-B-02', by: 'Suresh K' },
+  { date: '2026-08-23', ref: 'ADJ-101',  type: 'Adjust',  item: 'IT-310 · Bearing', qty: -3,   bin: 'A-12-B-03', by: 'Priya N' },
+  { date: '2026-08-22', ref: 'TRF-201',  type: 'Transfer',item: 'IT-401 · Motor', qty: -5,   bin: 'A-12-B-04 → A-13-B-01', by: 'Suresh K' },
+  { date: '2026-08-22', ref: 'PRO-1043', type: 'Issue',   item: 'IT-550 · Copper Wire', qty: -200, bin: 'A-12-B-05', by: 'Manoj J' },
+];
+
+document.getElementById('movementTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Date', render: r => fmtDate(r.date) },
+    { label: 'Ref', key: 'ref', mono: true },
+    { label: 'Type', render: r => {
+      const map = { Receipt:'success', Issue:'info', Adjust:'warning', Transfer:'attention' };
+      return `<span class="chip chip-${map[r.type]}">${r.type}</span>`;
+    }},
+    { label: 'Item', key: 'item' },
+    { label: 'Qty', align: 'right', num: true, render: r => `<span style="color:${r.qty > 0 ? 'var(--success)' : 'var(--critical)'}">${r.qty > 0 ? '+' : ''}${fmtNumber(r.qty)}</span>` },
+    { label: 'Bin', key: 'bin', mono: true },
+    { label: 'By', key: 'by' },
+  ],
+  rows
+});
+
+document.getElementById('transferBtn').addEventListener('click', () => toast('Transfer', 'Select source and target bin', 'info'));
+document.getElementById('adjustBtn').addEventListener('click', () => toast('Adjust', 'Adjustment requires approval above threshold', 'info'));
+</script>
+</body>
+</html>

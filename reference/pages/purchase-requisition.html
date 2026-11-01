@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Purchase Requisitions · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Purchase Requisitions</div>
+        <div class="page-subtitle">Dept → PR → Approval → RFQ</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" id="newPrBtn">New Requisition</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open PRs</span></div><div class="kpi-value">3</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Awaiting Approval</span></div><div class="kpi-value" style="color:var(--warning)">2</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Converted to RFQ</span></div><div class="kpi-value">8</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Avg Cycle Time</span></div><div class="kpi-value">2.4 d</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-body" id="prTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, confirmDialog } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Purchase Requisitions'], notifications });
+
+const prs = await api.getPurchaseRequisitions();
+
+function render() {
+  document.getElementById('prTable').innerHTML = dataTable({
+    columns: [
+      { label: 'PR #', key: 'id', mono: true },
+      { label: 'Department', key: 'dept' },
+      { label: 'Item', key: 'item' },
+      { label: 'Qty', key: 'qty', align: 'right', num: true },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Requested', render: r => fmtDate(r.date) },
+      { label: 'Status', render: r => {
+        const map = { Approved: 'success', Pending: 'warning', Rejected: 'critical' };
+        return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+      }},
+      { label: '', render: r => r.status === 'Pending'
+          ? `<button class="btn btn-primary btn-sm" data-approve="${r.id}">Approve</button>`
+          : `<button class="btn btn-ghost btn-sm">View</button>` },
+    ],
+    rows: prs
+  });
+  document.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', async () => {
+    const pr = prs.find(p => p.id === b.dataset.approve);
+    const ok = await confirmDialog({
+      title: `Approve ${pr.id}?`,
+      message: `${pr.item} × ${pr.qty} · ${fmtCurrencyINR(pr.amount)}. This will route to RFQ stage.`,
+      confirmText: 'Approve',
+    });
+    if (ok) { pr.status = 'Approved'; render(); toast('PR approved', `${pr.id} moved to RFQ stage`, 'success'); }
+  }));
+}
+render();
+
+document.getElementById('newPrBtn').addEventListener('click', () => toast('New Requisition', 'PR form opens here', 'info'));
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!-- mrp.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRP · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Material Requirements Planning</div>
+        <div class="page-subtitle">Demand + BOM → purchase & production requirements</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" id="runMrp">Run MRP</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Replenishment Recommendations</div></div>
+      <div class="card-body" id="mrpTable"></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Worked Example</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;font-size:13px">
+          <div><div class="text-muted">Current Stock</div><div style="font-weight:600;font-size:18px">80</div></div>
+          <div><div class="text-muted">Safety Stock</div><div style="font-weight:600;font-size:18px">100</div></div>
+          <div><div class="text-muted">Demand</div><div style="font-weight:600;font-size:18px">150</div></div>
+          <div><div class="text-muted">Lead Time</div><div style="font-weight:600;font-size:18px">15 days</div></div>
+          <div><div class="text-muted">Recommended Purchase</div><div style="font-weight:600;font-size:18px;color:var(--brand-primary)">170 units</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtNumber } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Supply Chain', 'MRP'], notifications });
+
+const items = await api.getItems();
+const rows = items.map(i => {
+  const gap = (i.demand + i.safety) - i.stock;
+  return { ...i, gap, recommend: Math.max(0, gap + i.safety) };
+}).filter(r => r.gap > 0);
+
+document.getElementById('mrpTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Item', key: 'code', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'Stock',    key: 'stock',    align: 'right', num: true },
+    { label: 'Safety',   key: 'safety',   align: 'right', num: true },
+    { label: 'Demand',   key: 'demand',   align: 'right', num: true },
+    { label: 'Shortage', align: 'right', num: true, render: r => `<span style="color:var(--critical)">${fmtNumber(r.gap)}</span>` },
+    { label: 'Recommend', align: 'right', num: true, render: r => `<b>${fmtNumber(r.recommend)}</b>` },
+    { label: '', render: () => '<button class="btn btn-primary btn-sm">Create PR</button>' },
+  ],
+  rows
+});
+
+document.getElementById('mrpTable').addEventListener('click', e => {
+  if (e.target.tagName === 'BUTTON') {
+    toast('Draft PR created', 'Awaiting your approval in Workflow Engine', 'success');
+  }
+});
+
+document.getElementById('runMrp').addEventListener('click', () => {
+  toast('MRP run started', 'Recalculating requirements across all BOMs…', 'info');
+  setTimeout(() => toast('MRP complete', `${rows.length} items need replenishment`, 'success'), 1400);
+});
+</script>
+</body>
+</html>

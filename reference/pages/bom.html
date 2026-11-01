@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bill of Materials · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Bill of Materials</div>
+        <div class="page-subtitle">Multi-level BOM · versioning · effective dates</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Import BOM</button>
+        <button class="btn btn-primary" id="newBomBtn">New BOM</button>
+      </div>
+    </div>
+
+    <div id="bomTable"></div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header">
+        <div class="card-title">BOM Tree — Pump Assembly A (BOM-001)</div>
+        <div class="segmented">
+          <button class="active">Tree</button>
+          <button>Table</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="bomTree"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, icon } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'BOM'], notifications });
+
+const boms = [
+  { id: 'BOM-001', product: 'Pump Assembly A', level: 3, components: 14, ver: 'v3', effective: '2026-04-01', status: 'Active' },
+  { id: 'BOM-002', product: 'Motor Frame B',   level: 3, components: 9,  ver: 'v2', effective: '2026-06-15', status: 'Active' },
+  { id: 'BOM-003', product: 'Bracket C',       level: 2, components: 4,  ver: 'v1', effective: '2026-01-10', status: 'Active' },
+  { id: 'BOM-004', product: 'Gearbox D',       level: 4, components: 22, ver: 'v1', effective: '2026-07-01', status: 'Draft' },
+  { id: 'BOM-005', product: 'Valve Body E',    level: 2, components: 6,  ver: 'v2', effective: '2025-11-20', status: 'Obsolete' },
+];
+
+document.getElementById('bomTable').innerHTML = dataTable({
+  columns: [
+    { label: 'BOM #', key: 'id', mono: true },
+    { label: 'Product', key: 'product' },
+    { label: 'Levels', key: 'level', align: 'right', num: true },
+    { label: 'Components', key: 'components', align: 'right', num: true },
+    { label: 'Version', key: 'ver', mono: true },
+    { label: 'Effective', render: r => fmtDate(r.effective) },
+    { label: 'Status', render: r => {
+      const map = { Active: 'success', Draft: 'warning', Obsolete: 'neutral' };
+      return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+    { label: '', render: () => `<button class="btn btn-ghost btn-sm">View</button>` },
+  ],
+  rows: boms
+});
+
+/* Multi-level BOM tree for Pump Assembly A */
+const tree = [
+  { name: 'Pump Assembly A', qty: 1, uom: 'PCS', indent: 0, isProduct: true },
+  { name: 'Steel Plate 5mm', qty: 12, uom: 'KG', indent: 1, code: 'IT-100' },
+  { name: 'Aluminium Sheet', qty: 4, uom: 'KG', indent: 1, code: 'IT-205' },
+  { name: 'Sub-assembly — Shaft Module', qty: 1, uom: 'PCS', indent: 1, subassembly: true },
+  { name: 'Bearing SKF-6205', qty: 2, uom: 'PCS', indent: 2, code: 'IT-310' },
+  { name: 'Copper Wire 2mm', qty: 6, uom: 'MTR', indent: 2, code: 'IT-550' },
+  { name: 'Motor 5HP', qty: 1, uom: 'PCS', indent: 1, code: 'IT-401' },
+  { name: 'Fasteners Kit', qty: 1, uom: 'SET', indent: 1 },
+];
+
+document.getElementById('bomTree').innerHTML = tree.map(n => `
+  <div style="padding:8px 0 8px ${n.indent * 28 + 8}px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);font-size:13px;${n.isProduct ? 'font-weight:600' : ''}">
+    ${n.indent > 0 ? `<span style="color:var(--text-faint)">└─</span>` : ''}
+    ${n.subassembly ? icon('layers', 14) : ''}
+    ${n.code ? `<span class="mono" style="color:var(--text-muted);font-size:12px">${n.code}</span>` : ''}
+    <span style="flex:1">${n.name}</span>
+    <span class="num" style="color:var(--text-muted)">${n.qty} ${n.uom}</span>
+  </div>`).join('');
+
+document.getElementById('newBomBtn').addEventListener('click', () => toast('New BOM', 'BOM builder opens here', 'info'));
+</script>
+</body>
+</html>

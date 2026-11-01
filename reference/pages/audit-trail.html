@@ -1,0 +1,80 @@
+<!-- audit-trail.html (§9) -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit Trail · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Audit Trail</div>
+        <div class="page-subtitle">Who · When · What · Prev/New · Reason · IP · Session</div>
+      </div>
+    </div>
+
+    <div class="table-toolbar">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search audit entries…" id="audSearch">
+      </div>
+      <select class="select" style="width:auto"><option>All modules</option><option>Finance</option><option>Purchasing</option><option>Inventory</option></select>
+      <select class="select" style="width:auto"><option>Last 7 days</option><option>Today</option><option>Last 30 days</option></select>
+    </div>
+
+    <div id="audTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Administration', 'Audit Trail'], notifications });
+
+const rows = [
+  { ts: '2026-08-24 14:22:11', user: 'Anita Sharma', action: 'APPROVE', entity: 'PO-2011', prev: 'Pending', next: 'Approved', reason: 'Within budget', ip: '10.0.4.22' },
+  { ts: '2026-08-24 14:18:02', user: 'Suresh Kumar', action: 'UPDATE',  entity: 'IT-100 stock', prev: '80', next: '95', reason: 'Cycle count adjustment', ip: '10.0.4.55' },
+  { ts: '2026-08-24 13:42:09', user: 'Vikram Rao', action: 'CREATE',  entity: 'PR-103', prev: '—', next: 'Draft', reason: 'MRP shortage', ip: '10.0.4.12' },
+  { ts: '2026-08-24 12:10:45', user: 'Priya Nair', action: 'STATUS',  entity: 'PRO-1042', prev: 'In Progress', next: 'Completed', reason: 'QC passed', ip: '10.0.4.31' },
+];
+
+function render(filter = '') {
+  const f = filter.toLowerCase();
+  const data = rows.filter(r => !f || JSON.stringify(r).toLowerCase().includes(f));
+  document.getElementById('audTable').innerHTML = dataTable({
+    columns: [
+      { label: 'Timestamp', key: 'ts', mono: true },
+      { label: 'User', key: 'user' },
+      { label: 'Action', render: r => `<span class="chip chip-info">${r.action}</span>` },
+      { label: 'Entity', key: 'entity', mono: true },
+      { label: 'Prev', key: 'prev' },
+      { label: 'New', key: 'next' },
+      { label: 'Reason', key: 'reason' },
+      { label: 'IP', key: 'ip', mono: true },
+    ],
+    rows: data
+  });
+}
+render();
+document.getElementById('audSearch').addEventListener('input', e => render(e.target.value));
+</script>
+</body>
+</html>

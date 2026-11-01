@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Machines · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Machines</div>
+        <div class="page-subtitle">Asset register · maintenance status · runtime</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">Add Machine</button></div>
+    </div>
+
+    <div id="machinesTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtNumber } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'Machines'], notifications });
+
+const machines = [
+  { id: 'MCH-001', name: 'CNC Lathe Fanuc T-200', wc: 'WC-01', make: 'Fanuc', installed: '2022-03-12', runtime: 18420, mtbf: 420, lastMaint: '2026-06-15', status: 'Running' },
+  { id: 'MCH-002', name: 'Milling Machine Haas VF-4', wc: 'WC-02', make: 'Haas', installed: '2021-08-22', runtime: 22110, mtbf: 380, lastMaint: '2026-05-20', status: 'Running' },
+  { id: 'MCH-003', name: 'CNC 5-axis DMG Mori', wc: 'WC-03', make: 'DMG Mori', installed: '2023-11-04', runtime: 8900, mtbf: 520, lastMaint: '2026-08-01', status: 'Running' },
+  { id: 'MCH-004', name: 'MIG Welder Lincoln',  wc: 'WC-04', make: 'Lincoln', installed: '2020-06-18', runtime: 31200, mtbf: 250, lastMaint: '2026-04-10', status: 'Maintenance' },
+  { id: 'MCH-005', name: 'Assembly Robot UR-10',wc: 'WC-05', make: 'Universal Robots', installed: '2024-02-28', runtime: 4500, mtbf: 610, lastMaint: '2026-07-15', status: 'Running' },
+];
+
+document.getElementById('machinesTable').innerHTML = dataTable({
+  columns: [
+    { label: 'ID', key: 'id', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'Work Center', key: 'wc', mono: true },
+    { label: 'Make', key: 'make' },
+    { label: 'Installed', key: 'installed' },
+    { label: 'Runtime', align: 'right', num: true, render: r => `${fmtNumber(r.runtime)} hrs` },
+    { label: 'MTBF', align: 'right', num: true, render: r => `${r.mtbf} hrs` },
+    { label: 'Last Maint.', key: 'lastMaint' },
+    { label: 'Status', render: r => r.status === 'Running'
+        ? '<span class="chip chip-success">Running</span>'
+        : '<span class="chip chip-warning">Maintenance</span>' },
+    { label: '', render: () => '<button class="btn btn-ghost btn-sm">Details</button>' },
+  ],
+  rows: machines
+});
+</script>
+</body>
+</html>

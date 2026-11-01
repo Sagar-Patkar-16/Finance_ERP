@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work Centers · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Work Centers</div>
+        <div class="page-subtitle">Capacity · cost rate · shift · utilization</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-primary">New Work Center</button></div>
+    </div>
+
+    <div class="grid grid-3" id="wcCards"></div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Utilization This Week</div></div>
+      <div class="card-body" style="height:320px"><canvas id="wcChart"></canvas></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { statusChip } from '../js/components.js';
+import { barChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'Work Centers'], notifications });
+
+const wcs = [
+  { id: 'WC-01', name: 'Lathe Bay', capacity: 40, used: 30, rate: 850, shift: 'A · 8h', status: 'info' },
+  { id: 'WC-02', name: 'Milling Bay', capacity: 30, used: 27, rate: 950, shift: 'A · 8h', status: 'warning' },
+  { id: 'WC-03', name: 'CNC Cell', capacity: 25, used: 22, rate: 1200, shift: 'A+B · 16h', status: 'warning' },
+  { id: 'WC-04', name: 'Welding Bay', capacity: 45, used: 38, rate: 720, shift: 'A · 8h', status: 'info' },
+  { id: 'WC-05', name: 'Assembly Line', capacity: 50, used: 42, rate: 600, shift: 'A+B · 16h', status: 'info' },
+  { id: 'QC Lab', name: 'Quality Lab', capacity: 20, used: 12, rate: 550, shift: 'A · 8h', status: 'success' },
+];
+
+document.getElementById('wcCards').innerHTML = wcs.map(w => {
+  const pct = Math.round(w.used / w.capacity * 100);
+  const level = pct >= 90 ? 'critical' : pct >= 75 ? 'warning' : pct >= 50 ? 'info' : 'success';
+  return `
+    <div class="kpi">
+      <div class="kpi-header">
+        <span class="kpi-label">${w.id} · ${w.name}</span>
+        ${statusChip(level, `${pct}%`)}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px">
+        <span class="text-muted">Capacity</span><b class="num">${w.used} / ${w.capacity} hrs</b>
+      </div>
+      <div class="progress" style="margin:8px 0"><div class="progress-bar ${level}" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)">
+        <span>${w.shift}</span>
+        <span class="num">₹${w.rate}/hr</span>
+      </div>
+    </div>`;
+}).join('');
+
+barChart('wcChart', {
+  labels: wcs.map(w => w.id),
+  datasets: [{ label: 'Utilization %', data: wcs.map(w => Math.round(w.used/w.capacity*100)),
+    color: getComputedStyle(document.documentElement).getPropertyValue('--chart-1') }]
+});
+</script>
+</body>
+</html>

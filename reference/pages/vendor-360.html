@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor 360° · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Vendor 360°</div>
+        <div class="page-subtitle">Full vendor profile across all modules</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="exportBtn">Export</button>
+        <button class="btn btn-primary" id="newPoBtn">New PO</button>
+      </div>
+    </div>
+
+    <div class="table-toolbar">
+      <div class="input-search" style="max-width:340px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <select class="input" id="vendorSelect"></select>
+      </div>
+    </div>
+
+    <div class="entity-header" id="entityHeader"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="overview">Overview</div>
+      <div class="tab" data-tab="contacts">Contacts</div>
+      <div class="tab" data-tab="pos">Purchase Orders</div>
+      <div class="tab" data-tab="invoices">Invoices</div>
+      <div class="tab" data-tab="payments">Payments</div>
+      <div class="tab" data-tab="contracts">Contracts</div>
+    </div>
+
+    <div class="tab-panel active" data-panel="overview">
+      <div class="grid grid-charts">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Spend Trend</div></div>
+          <div class="card-body" style="height:300px"><canvas id="vSpend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Performance</div></div>
+          <div class="card-body" style="height:300px"><canvas id="vPerf"></canvas></div>
+        </div>
+      </div>
+      <div class="grid grid-3" style="margin-top:var(--sp-5)">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent POs</div></div>
+          <div class="card-body" id="recentPos"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Invoices</div></div>
+          <div class="card-body" id="recentInv"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Delivery Performance</div></div>
+          <div class="card-body" id="deliveryPerf"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="contacts">
+      <div class="card"><div class="card-body" id="contactsBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="pos">
+      <div class="card"><div class="card-body" id="posBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="invoices">
+      <div class="card"><div class="card-body" id="invoicesBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="payments">
+      <div class="card"><div class="card-body" id="paymentsBody"></div></div>
+    </div>
+    <div class="tab-panel" data-panel="contracts">
+      <div class="card"><div class="card-body" id="contractsBody"></div></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, initTabs, toast, icon } from '../js/components.js';
+import { lineChart, doughnutChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Purchasing', 'Vendor 360°'], notifications });
+
+const vendors = await api.getVendors();
+const sel = document.getElementById('vendorSelect');
+sel.innerHTML = vendors.map(v => `<option value="${v.id}">${v.name} (${v.id})</option>`).join('');
+
+function render(id) {
+  const v = vendors.find(x => x.id === id);
+  if (!v) return;
+
+  document.getElementById('entityHeader').innerHTML = `
+    <div class="entity-title-row">
+      <div class="entity-avatar" style="background:var(--info-bg);color:var(--info)">${v.name.slice(0,1)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="entity-name">${v.name}</div>
+        <div class="entity-meta">${v.id} · ${v.category} · ${v.contact}</div>
+      </div>
+      <div>${v.rating >= 4.5 ? '<span class="chip chip-success">Preferred</span>' :
+              v.rating >= 4 ? '<span class="chip chip-info">Approved</span>' :
+              '<span class="chip chip-attention">Review</span>'}</div>
+    </div>
+    <div class="entity-stats">
+      <div class="entity-stat"><span class="label">Total Spend</span><span class="value">${fmtCurrencyINR(v.spend)}</span></div>
+      <div class="entity-stat"><span class="label">Outstanding</span><span class="value">${fmtCurrencyINR(v.outstanding)}</span></div>
+      <div class="entity-stat"><span class="label">Orders</span><span class="value">${Math.floor(v.spend/500000)}</span></div>
+      <div class="entity-stat"><span class="label">Avg Delivery</span><span class="value">${v.delivery} days</span></div>
+      <div class="entity-stat"><span class="label">Rating</span><span class="value">${v.rating} ★</span></div>
+    </div>`;
+
+  document.getElementById('recentPos').innerHTML = `
+    <div style="font-size:13px">PO-2014 · ₹7,80,000 · Approved</div>
+    <div style="font-size:13px;margin-top:8px">PO-2011 · ₹4,80,000 · Approved</div>
+    <div style="font-size:13px;margin-top:8px">PO-2008 · ₹2,20,000 · Received</div>`;
+
+  document.getElementById('recentInv').innerHTML = `
+    <div style="font-size:13px">VI-3004 · ₹7,80,000 · Approved</div>
+    <div style="font-size:13px;margin-top:8px">VI-3001 · ₹4,80,000 · Approved</div>
+    <div style="font-size:13px;margin-top:8px">VI-2998 · ₹2,20,000 · Paid</div>`;
+
+  document.getElementById('deliveryPerf').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>On-time</span><b>${90 - Math.floor((5 - v.rating) * 10)}%</b></div>
+    <div class="progress" style="margin-bottom:12px"><div class="progress-bar success" style="width:${90 - Math.floor((5 - v.rating) * 10)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Quality</span><b>${Math.round(v.rating * 20)}%</b></div>
+    <div class="progress" style="margin-bottom:12px"><div class="progress-bar" style="width:${Math.round(v.rating*20)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Responsiveness</span><b>${Math.round(v.rating * 19)}%</b></div>
+    <div class="progress"><div class="progress-bar" style="width:${Math.round(v.rating*19)}%"></div></div>`;
+
+  document.getElementById('contactsBody').innerHTML = `
+    <div style="display:grid;gap:12px">
+      <div><b>Primary contact</b><br>${v.contact}<br>${v.phone}</div>
+      <div><b>Email</b><br><a href="mailto:${v.email}">${v.email}</a></div>
+      <div><b>Payment terms</b><br>${v.terms} · ${v.currency}</div>
+      <div><b>Category</b><br>${v.category}</div>
+    </div>`;
+
+  document.getElementById('posBody').innerHTML = dataTable({
+    columns: [
+      { label: 'PO #', key: 'id', mono: true },
+      { label: 'Date', key: 'date' },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Status', render: r => `<span class="chip chip-success">${r.status}</span>` },
+    ],
+    rows: [
+      { id: 'PO-2014', date: '2026-08-23', amount: 780000, status: 'Approved' },
+      { id: 'PO-2011', date: '2026-08-20', amount: 480000, status: 'Approved' },
+      { id: 'PO-2008', date: '2026-08-12', amount: 220000, status: 'Received' },
+    ]
+  });
+
+  document.getElementById('invoicesBody').innerHTML = dataTable({
+    columns: [
+      { label: 'Invoice #', key: 'id', mono: true },
+      { label: 'Due', key: 'due' },
+      { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+      { label: 'Status', render: r => `<span class="chip chip-${r.status === 'Paid' ? 'success' : 'warning'}">${r.status}</span>` },
+    ],
+    rows: [
+      { id: 'VI-3004', due: '2026-08-30', amount: 780000, status: 'Approved' },
+      { id: 'VI-3001', due: '2026-08-27', amount: 480000, status: 'Approved' },
+      { id: 'VI-2998', due: '2026-08-15', amount: 220000, status: 'Paid' },
+    ]
+  });
+
+  document.getElementById('paymentsBody').innerHTML = `
+    <div style="font-size:13px">18 Aug 2026 · ₹2,20,000 · NEFT · HDFC-8834</div>
+    <div style="font-size:13px;margin-top:8px">02 Aug 2026 · ₹3,40,000 · RTGS · HDFC-8834</div>`;
+
+  document.getElementById('contractsBody').innerHTML = `
+    <div class="card" style="box-shadow:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-weight:600;font-size:13px">Supply Agreement 2025-26</div>
+          <div style="font-size:12px;color:var(--text-muted)">Valid until 31 Mar 2026</div>
+        </div>
+        <span class="chip chip-success">Active</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+        <div>
+          <div style="font-weight:600;font-size:13px">Quality MOU</div>
+          <div style="font-size:12px;color:var(--text-muted)">Expires 15 Sep 2026</div>
+        </div>
+        <span class="chip chip-warning">Expiring</span>
+      </div>
+    </div>`;
+
+  lineChart('vSpend', {
+    labels: ['Mar','Apr','May','Jun','Jul','Aug'],
+    datasets: [{ label: 'Spend', data: [12, 14, 16, 15, 18, 20], color: getComputedStyle(document.documentElement).getPropertyValue('--chart-2'), fill: true }]
+  });
+  doughnutChart('vPerf', {
+    labels: ['On-time', 'Late', 'Rejected'],
+    data: [90, 8, 2],
+    colors: ['#10B981', '#F59E0B', '#EF4444']
+  });
+}
+
+render(sel.value);
+sel.addEventListener('change', e => render(e.target.value));
+initTabs();
+
+document.getElementById('exportBtn').addEventListener('click', () => toast('Export queued', 'Vendor report will be emailed', 'info'));
+document.getElementById('newPoBtn').addEventListener('click', () => location.href = 'purchase-order.html');
+</script>
+</body>
+</html>

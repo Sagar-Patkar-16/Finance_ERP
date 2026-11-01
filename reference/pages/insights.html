@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Insights · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">AI Insights</div>
+        <div class="page-subtitle">Cross-module intelligence · ranked by impact</div>
+      </div>
+      <div class="page-actions"><button class="btn btn-secondary">Refresh</button></div>
+    </div>
+
+    <div class="tabs" id="insightTabs">
+      <div class="tab active" data-tab="all">All</div>
+      <div class="tab" data-tab="finance">Finance</div>
+      <div class="tab" data-tab="ops">Operations</div>
+      <div class="tab" data-tab="people">People</div>
+    </div>
+
+    <div class="tab-panel active" data-panel="all"><div id="allInsights"></div></div>
+    <div class="tab-panel" data-panel="finance"><div id="finInsights"></div></div>
+    <div class="tab-panel" data-panel="ops"><div id="opsInsights"></div></div>
+    <div class="tab-panel" data-panel="people"><div id="peopleInsights"></div></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, statusChip, initTabs, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Intelligence', 'Insights'], notifications });
+
+const insights = [
+  { domain: 'finance', level: 'warning',   title: 'Cash flow tight in 45–60 days', body: 'Projected closing balance falls below ₹2 Cr due to ₹1.24 Cr vendor payout cycle overlapping with delayed collections from LMN Pharma.', impact: 'High' },
+  { domain: 'ops',     level: 'critical',  title: 'Steel Plate stockout in 12 days', body: 'IT-100 coverage drops below safety stock. Recommend raising PR for 500 KG now; lead time is 15 days.', impact: 'Critical' },
+  { domain: 'ops',     level: 'warning',   title: 'WC-03 CNC approaching overload',  body: 'Next 2 weeks demand pushes CNC cell to 96% utilization. Consider adding B shift or outsourcing 3 jobs.', impact: 'Medium' },
+  { domain: 'finance', level: 'attention', title: 'Dormant customer reactivation',   body: 'DEF Tools has not ordered in 94 days. Historical avg order value ₹1.45 L. Suggest targeted outreach.', impact: 'Medium' },
+  { domain: 'people',  level: 'attention', title: 'Overtime spike in Production',    body: 'Production dept overtime +38% MoM. Root cause: WC-04 unplanned downtime. Schedule preventive maintenance.', impact: 'Medium' },
+  { domain: 'ops',     level: 'info',      title: 'Vendor A on-time performance',    body: 'Vendor A on-time delivery improved to 96% over last 60 days. Consider for volume consolidation.', impact: 'Low' },
+  { domain: 'finance', level: 'success',   title: 'Receivables improving',           body: 'DSO reduced from 42 to 34 days QoQ. Collections strategy working.', impact: 'Positive' },
+];
+
+function card(i) {
+  const map = { critical: 'alert-circle', warning: 'alert-triangle', attention: 'clock', info: 'info', success: 'check-circle' };
+  return `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-body" style="display:flex;gap:14px;align-items:flex-start">
+        <span style="color:var(--${i.level});flex-shrink:0;margin-top:2px">${icon(map[i.level], 20)}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            <span style="font-weight:600;font-size:14px">${i.title}</span>
+            ${statusChip(i.level, i.level.charAt(0).toUpperCase() + i.level.slice(1))}
+            <span class="chip chip-neutral">${i.domain}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-muted)">${i.body}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Impact</div>
+          <div style="font-weight:600">${i.impact}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+document.getElementById('allInsights').innerHTML    = insights.map(card).join('');
+document.getElementById('finInsights').innerHTML    = insights.filter(i => i.domain === 'finance').map(card).join('');
+document.getElementById('opsInsights').innerHTML    = insights.filter(i => i.domain === 'ops').map(card).join('');
+document.getElementById('peopleInsights').innerHTML = insights.filter(i => i.domain === 'people').map(card).join('');
+
+initTabs();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Routing · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Routing</div>
+        <div class="page-subtitle">Operations sequence · work centers · time &amp; cost</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary">New Routing</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Routing RT-001 — Pump Assembly A</div>
+        <span class="chip chip-success">Active</span>
+      </div>
+      <div class="card-body" id="routingBody"></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Routing Library</div></div>
+      <div class="card-body" id="routingList"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'Routing'], notifications });
+
+/* Operation timeline for one routing */
+const ops = [
+  { op: '10', name: 'Raw material issue',    wc: 'WC-01 Lathe',    setup: 15, run: 10, qty: 1, cost: 200 },
+  { op: '20', name: 'Turning',               wc: 'WC-01 Lathe',    setup: 30, run: 25, qty: 1, cost: 850 },
+  { op: '30', name: 'Milling',               wc: 'WC-02 Milling',  setup: 45, run: 18, qty: 1, cost: 1100 },
+  { op: '40', name: 'CNC finishing',         wc: 'WC-03 CNC',      setup: 20, run: 12, qty: 1, cost: 950 },
+  { op: '50', name: 'Welding',               wc: 'WC-04 Welding',  setup: 25, run: 20, qty: 1, cost: 720 },
+  { op: '60', name: 'Assembly',              wc: 'WC-05 Assembly', setup: 10, run: 30, qty: 1, cost: 400 },
+  { op: '70', name: 'Quality inspection',    wc: 'QC Lab',         setup: 0,  run: 15, qty: 1, cost: 180 },
+];
+
+document.getElementById('routingBody').innerHTML = ops.map((o, i) => `
+  <div style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)">
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--brand-primary-soft);color:var(--brand-primary);display:grid;place-items:center;font-weight:600;font-size:13px;flex-shrink:0">${o.op}</div>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:14px">${o.name}</div>
+      <div class="text-muted" style="font-size:12px">${o.wc}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,80px);gap:8px;font-size:12px">
+      <div><div class="text-muted">Setup</div><div class="num">${o.setup} min</div></div>
+      <div><div class="text-muted">Run</div><div class="num">${o.run} min</div></div>
+      <div><div class="text-muted">Qty</div><div class="num">${o.qty}</div></div>
+      <div><div class="text-muted">Cost</div><div class="num">₹${o.cost}</div></div>
+    </div>
+  </div>`).join('') + `
+  <div style="display:flex;justify-content:flex-end;gap:32px;margin-top:16px;font-weight:600">
+    <div>Total Setup: <span class="num">145 min</span></div>
+    <div>Total Run: <span class="num">130 min</span></div>
+    <div>Total Cost: <span class="num">₹4,400</span></div>
+  </div>`;
+
+document.getElementById('routingList').innerHTML = dataTable({
+  columns: [
+    { label: 'Routing #', key: 'id', mono: true },
+    { label: 'Product', key: 'product' },
+    { label: 'Operations', key: 'ops', align: 'right', num: true },
+    { label: 'Work Centers', key: 'wcs' },
+    { label: 'Version', key: 'ver', mono: true },
+    { label: 'Status', render: r => r.status === 'Active'
+        ? '<span class="chip chip-success">Active</span>'
+        : '<span class="chip chip-warning">Draft</span>' },
+  ],
+  rows: [
+    { id: 'RT-001', product: 'Pump Assembly A', ops: 7, wcs: 'WC-01 to WC-05, QC', ver: 'v2', status: 'Active' },
+    { id: 'RT-002', product: 'Motor Frame B',   ops: 5, wcs: 'WC-02, WC-03, WC-04', ver: 'v1', status: 'Active' },
+    { id: 'RT-003', product: 'Bracket C',       ops: 3, wcs: 'WC-02',             ver: 'v1', status: 'Active' },
+    { id: 'RT-004', product: 'Gearbox D',       ops: 9, wcs: 'WC-01 to WC-05',    ver: 'v1', status: 'Draft' },
+  ]
+});
+</script>
+</body>
+</html>

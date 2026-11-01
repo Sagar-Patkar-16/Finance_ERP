@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sales Orders · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sales Orders</div>
+        <div class="page-subtitle">Order → Delivery → Invoice → Payment</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Export</button>
+        <button class="btn btn-primary" id="newSoBtn">New Order</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open Orders</span></div><div class="kpi-value">24</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Backorders</span></div><div class="kpi-value" style="color:var(--warning)">3</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Pending Delivery</span></div><div class="kpi-value">9</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">MTD Value</span></div><div class="kpi-value">₹92.4 L</div></div>
+    </div>
+
+    <div class="table-toolbar" style="margin-top:var(--sp-5)">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search SO #, customer…" id="soSearch">
+      </div>
+      <select class="select" style="width:auto"><option>All statuses</option><option>Draft</option><option>Confirmed</option><option>Partially Delivered</option><option>Delivered</option><option>Invoiced</option></select>
+      <span class="spacer"></span>
+      <button class="btn btn-secondary" id="densityBtn">Comfortable</button>
+    </div>
+
+    <div id="soTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate, toggleDensity } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Sales & CRM', 'Sales Orders'], notifications });
+
+const orders = [
+  { id: 'SO-1043', customer: 'ABC Industries',    value: 480000,  date: '2026-08-20', delivery: '2026-08-28', items: 4, status: 'Confirmed' },
+  { id: 'SO-1042', customer: 'XYZ Manufacturing', value: 220000,  date: '2026-08-12', delivery: '2026-08-22', items: 2, status: 'Delivered' },
+  { id: 'SO-1041', customer: 'PQR Engineering',   value: 185000,  date: '2026-08-02', delivery: '2026-08-15', items: 3, status: 'Invoiced' },
+  { id: 'SO-1044', customer: 'LMN Pharma',        value: 1240000, date: '2026-08-22', delivery: '2026-09-05', items: 8, status: 'Draft' },
+  { id: 'SO-1045', customer: 'DEF Tools',         value: 145000,  date: '2026-08-23', delivery: '2026-09-02', items: 1, status: 'Confirmed' },
+];
+
+function render(filter = '') {
+  const f = filter.toLowerCase();
+  const rows = orders.filter(o => !f || JSON.stringify(o).toLowerCase().includes(f));
+  document.getElementById('soTable').innerHTML = dataTable({
+    columns: [
+      { label: 'SO #', key: 'id', mono: true },
+      { label: 'Customer', key: 'customer' },
+      { label: 'Value', align: 'right', num: true, render: r => fmtCurrencyINR(r.value) },
+      { label: 'Date', render: r => fmtDate(r.date) },
+      { label: 'Delivery', render: r => fmtDate(r.delivery) },
+      { label: 'Items', key: 'items', align: 'right', num: true },
+      { label: 'Status', render: r => {
+        const map = { Draft:'neutral', Confirmed:'info', 'Partially Delivered':'attention', Delivered:'success', Invoiced:'success' };
+        return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+      }},
+      { label: '', render: r => `<button class="btn btn-ghost btn-sm" data-view="${r.id}">View</button>` },
+    ],
+    rows
+  });
+
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+    const o = orders.find(x => x.id === b.dataset.view);
+    toast(o.id, `${o.customer} · ${fmtCurrencyINR(o.value)} · ${o.status}`, 'info');
+  }));
+}
+render();
+
+document.getElementById('soSearch').addEventListener('input', e => render(e.target.value));
+document.getElementById('newSoBtn').addEventListener('click', () => toast('New Sales Order', 'Order form opens here', 'info'));
+document.getElementById('densityBtn').addEventListener('click', e => {
+  const next = toggleDensity();
+  e.target.textContent = next.charAt(0).toUpperCase() + next.slice(1);
+});
+</script>
+</body>
+</html>

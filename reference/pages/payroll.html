@@ -1,0 +1,89 @@
+<!-- payroll.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Payroll</div>
+        <div class="page-subtitle">August 2026 · Draft run</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">View Register</button>
+        <button class="btn btn-primary" id="processBtn">Process Payroll</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Total Gross</span></div><div class="kpi-value">₹42.8 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Deductions</span></div><div class="kpi-value">₹6.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Net Payout</span></div><div class="kpi-value">₹36.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Payslips Ready</span></div><div class="kpi-value">142</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Payroll Preview</div></div>
+      <div class="card-body" id="payrollPreview"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, confirmDialog, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['HRMS', 'Payroll'], notifications });
+
+const rows = [
+  { emp: 'Rajesh Kumar',  gross: 75000, ded: 12000, net: 63000, status: 'Ready' },
+  { emp: 'Neha Singh',    gross: 92000, ded: 14500, net: 77500, status: 'Ready' },
+  { emp: 'Arun Verma',    gross: 55000, ded: 8000,  net: 47000, status: 'Ready' },
+  { emp: 'Sunita Patel',  gross: 48000, ded: 7000,  net: 41000, status: 'Ready' },
+  { emp: 'Manoj Joshi',   gross: 32000, ded: 4500,  net: 27500, status: 'Ready' },
+];
+
+document.getElementById('payrollPreview').innerHTML = dataTable({
+  columns: [
+    { label: 'Employee', key: 'emp' },
+    { label: 'Gross', align: 'right', num: true, render: r => fmtCurrencyINR(r.gross) },
+    { label: 'Deductions', align: 'right', num: true, render: r => fmtCurrencyINR(r.ded) },
+    { label: 'Net Pay', align: 'right', num: true, render: r => `<b>${fmtCurrencyINR(r.net)}</b>` },
+    { label: 'Status', render: r => `<span class="chip chip-success">${r.status}</span>` },
+  ],
+  rows
+});
+
+document.getElementById('processBtn').addEventListener('click', async () => {
+  const ok = await confirmDialog({
+    title: 'Process payroll for August 2026?',
+    message: 'This will generate 142 payslips and route for HR Manager approval. Continue?',
+    confirmText: 'Process',
+  });
+  if (ok) {
+    toast('Payroll processing', 'Generating payslips…', 'info');
+    setTimeout(() => toast('Payroll ready for approval', '142 payslips generated', 'success'), 1400);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barcode / QR · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Barcode / QR</div>
+        <div class="page-subtitle">Scan · lookup · pick confirmation · GRN confirmation</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <!-- Scanner panel -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Scanner Input</div></div>
+        <div class="card-body">
+          <div style="border:2px dashed var(--border-strong);border-radius:12px;padding:40px 20px;text-align:center;background:var(--surface-alt)">
+            <div style="font-size:44px;color:var(--brand-primary)">⌗</div>
+            <div style="font-weight:600;margin-top:12px">Ready to scan</div>
+            <div class="text-muted" style="font-size:13px;margin-bottom:16px">Point your scanner at a barcode or enter manually below</div>
+            <button class="btn btn-primary">Activate Camera</button>
+          </div>
+          <div class="field" style="margin-top:16px">
+            <label>Or enter code manually</label>
+            <div style="display:flex;gap:8px">
+              <input class="input mono" id="manualCode" placeholder="IT-100-A12B01">
+              <button class="btn btn-primary" id="lookupBtn">Lookup</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lookup result -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Scanned Item</div></div>
+        <div class="card-body" id="scanResult">
+          <div class="empty">
+            <div class="empty-icon">⌗</div>
+            <div class="empty-title">No item scanned</div>
+            <div class="empty-desc">Scan or enter a code to see details</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent scans -->
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Recent Scans</div></div>
+      <div class="card-body" id="scanHistory"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Inventory', 'Barcode / QR'], notifications });
+
+document.getElementById('lookupBtn').addEventListener('click', () => {
+  const code = document.getElementById('manualCode').value.trim();
+  if (!code) return;
+  toast('Scanning…', `Looking up ${code}`, 'info');
+  setTimeout(() => {
+    document.getElementById('scanResult').innerHTML = `
+      <div style="display:grid;gap:12px">
+        <div><div class="text-muted" style="font-size:11px;text-transform:uppercase">Item</div><div style="font-weight:600">IT-100 · Steel Plate 5mm</div></div>
+        <div><div class="text-muted" style="font-size:11px;text-transform:uppercase">Batch</div><div class="mono">BATCH-2026-08-15</div></div>
+        <div><div class="text-muted" style="font-size:11px;text-transform:uppercase">Bin Location</div><div class="mono">A-12-B-01</div></div>
+        <div><div class="text-muted" style="font-size:11px;text-transform:uppercase">Available</div><div style="font-weight:600;font-size:20px">80 KG</div></div>
+        <div><div class="text-muted" style="font-size:11px;text-transform:uppercase">Valuation</div><div>₹240,000 (FIFO)</div></div>
+        <div><span class="chip chip-warning">Below Safety Stock (100)</span></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary btn-sm">Pick</button>
+          <button class="btn btn-secondary btn-sm">Adjust</button>
+          <button class="btn btn-secondary btn-sm">Transfer</button>
+        </div>
+      </div>`;
+  }, 700);
+});
+
+document.getElementById('scanHistory').innerHTML = dataTable({
+  columns: [
+    { label: 'Time', key: 'ts', mono: true },
+    { label: 'Code', key: 'code', mono: true },
+    { label: 'Action', key: 'action' },
+    { label: 'By', key: 'by' },
+  ],
+  rows: [
+    { ts: '14:42:08', code: 'IT-100-A12B01', action: 'Pick confirmed (SO-1043)', by: 'Suresh K' },
+    { ts: '14:38:12', code: 'IT-205-A12B02', action: 'GRN received (GRN-2011)', by: 'Suresh K' },
+    { ts: '13:05:47', code: 'IT-310-A12B03', action: 'Cycle count adjustment', by: 'Priya N' },
+  ]
+});
+</script>
+</body>
+</html>

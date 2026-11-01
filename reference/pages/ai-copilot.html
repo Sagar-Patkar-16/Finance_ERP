@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Copilot · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content" style="padding:0;display:grid;grid-template-columns:1fr 320px;gap:0;height:calc(100vh - var(--topbar-h))">
+    <div class="chat-wrap" style="background:var(--surface)">
+      <div class="chat-scroll" id="chatScroll"></div>
+      <div class="chat-input-row">
+        <input class="input" id="chatInput" placeholder="Ask across Finance, Operations, People…">
+        <button class="btn btn-primary btn-icon" id="sendBtn" aria-label="Send">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </div>
+    <aside style="background:var(--surface);border-left:1px solid var(--border);padding:16px;overflow-y:auto">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:600;margin-bottom:8px">Suggested prompts</div>
+      <div id="promptList"></div>
+      <div style="margin-top:20px;padding:12px;background:var(--warning-bg);border-radius:8px;font-size:12px;color:var(--warning)">
+        <b>Guardrail</b><br>AI prepares actions; you approve financial transactions.
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, rootPath } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, toast, confirmDialog } from '../js/components.js';
+import * as api from '../js/api.js';
+
+const session = requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Intelligence', 'AI Copilot'], notifications });
+
+const scroll = document.getElementById('chatScroll');
+const input = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function addMsg(role, html, opts = {}) {
+  const avatar = role === 'user'
+    ? `<div class="chat-avatar">${session.initials}</div>`
+    : `<div class="chat-avatar" style="background:var(--brand-primary);color:white">${icon('bot', 16)}</div>`;
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  el.innerHTML = `${avatar}<div class="chat-bubble">${html}</div>`;
+  scroll.appendChild(el);
+  scroll.scrollTop = scroll.scrollHeight;
+  return el;
+}
+
+function addActionCard(card) {
+  const el = document.createElement('div');
+  el.className = 'ai-action';
+  el.innerHTML = `
+    <div class="ai-action-title">${icon('sparkles', 14)} ${card.title}</div>
+    <div class="ai-action-meta">${card.meta}</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-primary btn-sm" data-act="approve">Approve</button>
+      <button class="btn btn-secondary btn-sm" data-act="edit">Edit</button>
+      <button class="btn btn-ghost btn-sm" data-act="reject">Reject</button>
+    </div>
+  `;
+  scroll.appendChild(el);
+  scroll.scrollTop = scroll.scrollHeight;
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', async () => {
+    const act = b.dataset.act;
+    if (act === 'approve') {
+      toast('Approved', 'Action routed through normal approval path', 'success');
+    } else if (act === 'edit') {
+      toast('Edit', 'Opening draft for editing', 'info');
+    } else {
+      toast('Rejected', 'Action discarded', 'warning');
+    }
+    el.remove();
+  }));
+}
+
+/* Welcome */
+addMsg('ai', `<b>Hi ${session.name.split(' ')[0]}.</b> I can see Finance, Operations, and People data.<br>Ask me anything, or click a suggested prompt.`);
+
+/* Send */
+async function send(text) {
+  if (!text.trim()) return;
+  addMsg('user', text);
+  input.value = '';
+  sendBtn.disabled = true;
+  const loader = addMsg('ai', `<span class="text-muted">Thinking…</span>`);
+  try {
+    const res = await api.askCopilot(text);
+    loader.querySelector('.chat-bubble').innerHTML =
+      `${res.text}${res.source ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px">${res.source}</div>` : ''}`;
+    if (res.action) addActionCard(res.action);
+  } catch (e) {
+    loader.querySelector('.chat-bubble').innerHTML = `<span style="color:var(--critical)">Error: ${e.message}</span>`;
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+sendBtn.addEventListener('click', () => send(input.value));
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input.value); } });
+
+/* Suggested prompts */
+const prompts = await api.getCopilotPrompts();
+document.getElementById('promptList').innerHTML = prompts.map(p =>
+  `<button class="btn btn-secondary btn-sm" style="width:100%;text-align:left;margin-bottom:6px;justify-content:flex-start">${p}</button>`
+).join('');
+document.getElementById('promptList').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (btn) send(btn.textContent);
+});
+</script>
+</body>
+</html>

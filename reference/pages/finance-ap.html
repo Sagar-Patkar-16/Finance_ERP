@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounts Payable · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Accounts Payable</div>
+        <div class="page-subtitle">Vendor invoices · 3-way matching status</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="reconBtn">Reconcile</button>
+        <button class="btn btn-primary" id="newInvBtn">Record Invoice</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Total Payable</span></div><div class="kpi-value">₹1.10 Cr</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Due this week</span></div><div class="kpi-value">₹28.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Awaiting approval</span></div><div class="kpi-value">7</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Overdue</span></div><div class="kpi-value" style="color:var(--critical)">2</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Vendor Invoices</div></div>
+      <div class="card-body" id="apTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, icon } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Finance', 'Accounts Payable'], notifications });
+
+const rows = [
+  { id: 'VI-3001', vendor: 'Vendor A', po: 'PO-2011', grn: 'GRN-2011', amount: 480000, due: '2026-08-27', match: '3-Way', status: 'Approved' },
+  { id: 'VI-3002', vendor: 'Vendor C', po: 'PO-2012', grn: 'GRN-2012', amount: 1250000, due: '2026-09-01', match: '3-Way', status: 'Pending' },
+  { id: 'VI-3003', vendor: 'Vendor B', po: 'PO-2013', grn: '—', amount: 320000, due: '2026-09-05', match: '2-Way', status: 'Exception' },
+  { id: 'VI-3004', vendor: 'Vendor A', po: 'PO-2014', grn: 'GRN-2014', amount: 780000, due: '2026-08-30', match: '3-Way', status: 'Approved' },
+];
+
+document.getElementById('apTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Invoice', key: 'id', mono: true },
+    { label: 'Vendor', key: 'vendor' },
+    { label: 'PO', key: 'po', mono: true },
+    { label: 'GRN', key: 'grn', mono: true },
+    { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+    { label: 'Due', render: r => fmtDate(r.due) },
+    { label: 'Match', key: 'match' },
+    { label: 'Status', render: r => {
+        const map = { Approved: 'success', Pending: 'warning', Exception: 'critical' };
+        return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+      }},
+  ],
+  rows
+});
+
+document.getElementById('reconBtn').addEventListener('click', () => toast('Reconciliation', 'Running 3-way match for all open invoices…', 'info'));
+document.getElementById('newInvBtn').addEventListener('click', () => toast('New Invoice', 'Upload invoice or capture manually', 'info'));
+</script>
+</body>
+</html>

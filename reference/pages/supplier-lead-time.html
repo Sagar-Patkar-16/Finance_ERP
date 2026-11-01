@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supplier Lead Time · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Supplier Lead Time</div>
+        <div class="page-subtitle">Historical vs quoted · variability analysis</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Quoted vs Actual Lead Time (days)</div></div>
+      <div class="card-body" style="height:340px"><canvas id="ltChart"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Vendor Lead Time Detail</div></div>
+      <div class="card-body" id="ltTable"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { barChart } from '../js/charts.js';
+import { dataTable } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Supply Chain', 'Supplier Lead Time'], notifications });
+
+const vendors = await api.getVendors();
+
+barChart('ltChart', {
+  labels: vendors.map(v => v.name),
+  datasets: [
+    { label: 'Quoted', data: vendors.map(v => v.delivery), color: '#4F46E5' },
+    { label: 'Actual (avg)', data: vendors.map(v => Math.round(v.delivery * (1 + (5 - v.rating) * 0.06))), color: '#F59E0B' },
+  ]
+});
+
+document.getElementById('ltTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Vendor', key: 'vendor' },
+    { label: 'Quoted (days)', key: 'quoted', align: 'right', num: true },
+    { label: 'Actual Avg', key: 'actual', align: 'right', num: true },
+    { label: 'Variance', render: r => {
+        const v = r.actual - r.quoted;
+        return `<span style="color:${v > 0 ? 'var(--warning)' : 'var(--success)'}">${v > 0 ? '+' : ''}${v} days</span>`;
+    }},
+    { label: 'On-time %', render: r => `${Math.round(r.rating * 20)}%` },
+    { label: 'Rating', align: 'right', num: true, key: 'rating' },
+  ],
+  rows: vendors.map(v => ({
+    vendor: v.name,
+    quoted: v.delivery,
+    actual: Math.round(v.delivery * (1 + (5 - v.rating) * 0.06)),
+    rating: v.rating,
+  }))
+});
+</script>
+</body>
+</html>

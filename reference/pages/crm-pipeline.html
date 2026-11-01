@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM Pipeline · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sales Pipeline</div>
+        <div class="page-subtitle">Drag cards between stages to update deal status</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="filtersBtn">Filters</button>
+        <button class="btn btn-primary" id="newLeadBtn">New Lead</button>
+      </div>
+    </div>
+
+    <div class="kanban" id="kanban"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Sales & CRM', 'Pipeline'], notifications });
+
+const STAGES = ['New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Won / Lost'];
+const DEALS = [
+  { id: 'D-01', title: 'ABC Industries · Pump Assembly', value: 480000, owner: 'Neha Singh', stage: 'Qualified', days: 5 },
+  { id: 'D-02', title: 'LMN Pharma · Motor Frames',     value: 1240000, owner: 'Neha Singh', stage: 'Proposal', days: 12 },
+  { id: 'D-03', title: 'XYZ Mfg · Brackets',            value: 220000, owner: 'Ravi K',    stage: 'Contacted', days: 2 },
+  { id: 'D-04', title: 'PQR Eng · Copper Wire',         value: 680000, owner: 'Neha Singh', stage: 'Negotiation', days: 21 },
+  { id: 'D-05', title: 'DEF Tools · Bearings',          value: 145000, owner: 'Ravi K',    stage: 'New', days: 1 },
+  { id: 'D-06', title: 'ABC Industries · Annual AMC',   value: 850000, owner: 'Neha Singh', stage: 'Won / Lost', days: 30 },
+];
+
+function renderKanban() {
+  document.getElementById('kanban').innerHTML = STAGES.map(stage => {
+    const cards = DEALS.filter(d => d.stage === stage);
+    return `
+      <div class="kanban-col" data-stage="${stage}">
+        <div class="kanban-col-header">
+          <span>${stage}</span>
+          <span class="kanban-col-count">${cards.length}</span>
+        </div>
+        ${cards.map(c => `
+          <div class="kanban-card" draggable="true" data-id="${c.id}">
+            <div class="title">${c.title}</div>
+            <div class="meta">
+              <span>₹${(c.value/1000).toFixed(0)}K</span>
+              <span>${c.days}d · ${c.owner}</span>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+  bindDrag();
+}
+
+function bindDrag() {
+  let draggedId = null;
+  document.querySelectorAll('.kanban-card').forEach(card => {
+    card.addEventListener('dragstart', () => {
+      draggedId = card.dataset.id;
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+    });
+  });
+  document.querySelectorAll('.kanban-col').forEach(col => {
+    col.addEventListener('dragover', e => e.preventDefault());
+    col.addEventListener('drop', e => {
+      e.preventDefault();
+      const deal = DEALS.find(d => d.id === draggedId);
+      if (!deal) return;
+      const target = col.dataset.stage;
+      if (deal.stage === target) return;
+      deal.stage = target;
+      renderKanban();
+      toast('Deal moved', `${deal.title} → ${target}`, 'success');
+    });
+  });
+}
+
+renderKanban();
+
+document.getElementById('newLeadBtn').addEventListener('click', () => {
+  toast('New lead', 'Lead form will open here', 'info');
+});
+document.getElementById('filtersBtn').addEventListener('click', () => {
+  toast('Filters', 'Owner, value range, stage', 'info');
+});
+</script>
+</body>
+</html>

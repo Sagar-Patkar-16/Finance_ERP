@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production Orders · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Production Orders</div>
+        <div class="page-subtitle">Planned → Released → In Progress → QC → FG Receipt</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Schedule</button>
+        <button class="btn btn-primary" id="newPoBtn">New Order</button>
+      </div>
+    </div>
+
+    <!-- Workflow stepper -->
+    <div class="stepper" id="stepper">
+      <div class="step done"><span class="step-dot">✓</span><span>Planned</span></div>
+      <span class="step-sep">›</span>
+      <div class="step done"><span class="step-dot">✓</span><span>Released</span></div>
+      <span class="step-sep">›</span>
+      <div class="step active"><span class="step-dot">3</span><span>In Progress</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">4</span><span>QC</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">5</span><span>FG Receipt</span></div>
+    </div>
+
+    <div id="poTable"></div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header">
+        <div class="card-title">Material Reservation Status</div>
+      </div>
+      <div class="card-body" id="materialsBody"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast, statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Manufacturing', 'Production Orders'], notifications });
+
+const orders = await api.getProductionOrders();
+const enriched = [
+  ...orders,
+  { id: 'PRO-1045', product: 'Valve Body E', qty: 80, status: 'QC', progress: 95, due: '2026-08-25' },
+];
+
+document.getElementById('poTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Order', key: 'id', mono: true },
+    { label: 'Product', key: 'product' },
+    { label: 'Qty', key: 'qty', align: 'right', num: true },
+    { label: 'Progress', render: r => `
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progress" style="width:100px"><div class="progress-bar ${r.progress === 100 ? 'success' : r.progress >= 60 ? '' : 'warning'}" style="width:${r.progress}%"></div></div>
+          <span style="font-size:12px;color:var(--text-muted)">${r.progress}%</span>
+        </div>` },
+    { label: 'Due', render: r => fmtDate(r.due) },
+    { label: 'Status', render: r => {
+      const map = { Completed: 'success', 'In Progress': 'info', Planned: 'neutral', QC: 'attention' };
+      return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+    { label: '', render: () => `<button class="btn btn-ghost btn-sm">View</button>` },
+  ],
+  rows: enriched
+});
+
+const materials = [
+  { code: 'IT-100', name: 'Steel Plate 5mm', required: 240, reserved: 240, issued: 180, status: 'success' },
+  { code: 'IT-205', name: 'Aluminium Sheet', required: 80, reserved: 80, issued: 80, status: 'success' },
+  { code: 'IT-310', name: 'Bearing SKF-6205', required: 40, reserved: 32, issued: 20, status: 'warning' },
+  { code: 'IT-401', name: 'Motor 5HP', required: 20, reserved: 18, issued: 0, status: 'critical' },
+  { code: 'IT-550', name: 'Copper Wire 2mm', required: 120, reserved: 120, issued: 100, status: 'info' },
+];
+
+document.getElementById('materialsBody').innerHTML = dataTable({
+  columns: [
+    { label: 'Item', key: 'code', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'Required', key: 'required', align: 'right', num: true },
+    { label: 'Reserved', key: 'reserved', align: 'right', num: true },
+    { label: 'Issued', key: 'issued', align: 'right', num: true },
+    { label: 'Coverage', render: r => {
+        const pct = Math.round(r.reserved / r.required * 100);
+        return `<div style="display:flex;align-items:center;gap:6px">
+          <div class="progress" style="width:80px"><div class="progress-bar ${r.status}" style="width:${Math.min(100, pct)}%"></div></div>
+          <span style="font-size:12px;color:var(--text-muted)">${pct}%</span>
+        </div>`;
+    }},
+  ],
+  rows: materials
+});
+
+document.getElementById('newPoBtn').addEventListener('click', () => toast('New Production Order', 'Select BOM and quantity', 'info'));
+</script>
+</body>
+</html>

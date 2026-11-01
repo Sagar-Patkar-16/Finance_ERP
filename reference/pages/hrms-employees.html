@@ -1,0 +1,74 @@
+<!-- hrms-employees.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employees · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Employees</div>
+        <div class="page-subtitle">Full employee directory & lifecycle</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Export</button>
+        <button class="btn btn-primary">Add Employee</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Headcount</span></div><div class="kpi-value">142</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Present Today</span></div><div class="kpi-value">128</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">On Leave</span></div><div class="kpi-value">14</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Open Positions</span></div><div class="kpi-value">5</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Directory</div></div>
+      <div class="card-body" id="empTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate, initials } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['HRMS', 'Employees'], notifications });
+
+const emps = await api.getEmployees();
+document.getElementById('empTable').innerHTML = dataTable({
+  columns: [
+    { label: '', render: r => `<div class="avatar" style="width:30px;height:30px;font-size:11px">${initials(r.name)}</div>` },
+    { label: 'ID', key: 'id', mono: true },
+    { label: 'Name', key: 'name' },
+    { label: 'Department', key: 'dept' },
+    { label: 'Designation', key: 'designation' },
+    { label: 'Joined', render: r => fmtDate(r.joined) },
+    { label: 'Status', render: r => r.status === 'Active'
+        ? '<span class="chip chip-success">Active</span>'
+        : '<span class="chip chip-attention">On Leave</span>' },
+  ],
+  rows: emps
+});
+</script>
+</body>
+</html>

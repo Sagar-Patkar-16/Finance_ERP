@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integrations · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Integrations</div>
+        <div class="page-subtitle">External systems · APIs · webhooks</div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" id="intGrid"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { icon, statusChip, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Administration', 'Integrations'], notifications });
+
+const integrations = [
+  { name: 'Tally Prime',       desc: 'Sync GL entries from Tally',           icon: 'book',    status: 'Connected' },
+  { name: 'Zoho CRM',          desc: 'Bi-directional lead & opportunity sync',icon: 'users',  status: 'Connected' },
+  { name: 'Razorpay',          desc: 'Payment gateway for customer invoices', icon: 'dollar-sign', status: 'Connected' },
+  { name: 'WhatsApp Business', desc: 'Notification channel for alerts',       icon: 'send',    status: 'Available' },
+  { name: 'Biometric — ZKTeco',desc: 'Attendance punch-in sync',              icon: 'scan',    status: 'Connected' },
+  { name: 'AWS S3',            desc: 'Document storage & backups',            icon: 'database',status: 'Connected' },
+  { name: 'Slack',             desc: 'Alert routing to channels',             icon: 'send',    status: 'Available' },
+  { name: 'Bank — HDFC',       desc: 'Statement import & reconciliation',     icon: 'building',status: 'Connected' },
+  { name: 'Zoom',              desc: 'Interview scheduling (Recruitment)',    icon: 'calendar',status: 'Available' },
+];
+
+document.getElementById('intGrid').innerHTML = integrations.map(i => `
+  <div class="card">
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="kpi-icon">${icon(i.icon, 16)}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${i.name}</div>
+          <div class="text-muted" style="font-size:12px">${i.desc}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        ${i.status === 'Connected'
+          ? '<span class="chip chip-success">Connected</span>'
+          : '<span class="chip chip-neutral">Available</span>'}
+        <button class="btn ${i.status === 'Connected' ? 'btn-ghost' : 'btn-primary'} btn-sm" data-connect="${i.name}">
+          ${i.status === 'Connected' ? 'Configure' : 'Connect'}
+        </button>
+      </div>
+    </div>
+  </div>`).join('');
+
+document.getElementById('intGrid').addEventListener('click', e => {
+  const b = e.target.closest('[data-connect]');
+  if (b) toast(`${b.textContent}`, `${b.dataset.connect}`, 'info');
+});
+</script>
+</body>
+</html>

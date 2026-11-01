@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tax & Compliance · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Tax & Compliance</div>
+        <div class="page-subtitle">GST · TDS · Advance tax · Filing calendar</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary">File Return</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">GST Input Credit</span></div><div class="kpi-value">₹18.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">GST Liability</span></div><div class="kpi-value" style="color:var(--warning)">₹32.2 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">TDS Payable</span></div><div class="kpi-value">₹4.6 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Next Filing</span></div><div class="kpi-value" style="font-size:20px">GSTR-3B · 20 Sep</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Filing Calendar</div></div>
+      <div class="card-body" id="filingTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Finance', 'Tax & Compliance'], notifications });
+
+const filings = [
+  { form: 'GSTR-1',  period: 'Aug 2026', due: '2026-09-11', status: 'Pending' },
+  { form: 'GSTR-3B', period: 'Aug 2026', due: '2026-09-20', status: 'Pending' },
+  { form: 'TDS 26Q', period: 'Q1 FY27',  due: '2026-07-31', status: 'Filed' },
+  { form: 'GSTR-9',  period: 'FY 2025-26', due: '2026-12-31', status: 'Upcoming' },
+  { form: 'Advance Tax Q2', period: 'Q2 FY27', due: '2026-09-15', status: 'Pending' },
+];
+
+document.getElementById('filingTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Form', key: 'form', mono: true },
+    { label: 'Period', key: 'period' },
+    { label: 'Due', render: r => fmtDate(r.due) },
+    { label: 'Status', render: r => {
+      const map = { Filed: 'success', Pending: 'warning', Upcoming: 'info', Overdue: 'critical' };
+      return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+    { label: '', render: r => r.status === 'Pending' ? '<button class="btn btn-primary btn-sm">File Now</button>' : '' },
+  ],
+  rows: filings
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>General Ledger · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">General Ledger</div>
+        <div class="page-subtitle">Journal entries · FY 2026-27</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="exportBtn">Export</button>
+        <button class="btn btn-primary" id="newJeBtn">New Journal Entry</button>
+      </div>
+    </div>
+
+    <div class="table-toolbar">
+      <div class="input-search" style="max-width:280px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-3.5-3.5"/></svg>
+        <input class="input" placeholder="Search JEs…" id="searchJE">
+      </div>
+      <select class="select" style="width:auto"><option>All accounts</option><option>Cash</option><option>Receivables</option><option>Payables</option></select>
+      <select class="select" style="width:auto"><option>Aug 2026</option><option>Jul 2026</option></select>
+      <span class="spacer"></span>
+      <button class="btn btn-secondary" id="densityBtn">Comfortable</button>
+    </div>
+
+    <div id="glTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate, toggleDensity } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Finance', 'General Ledger'], notifications });
+
+const rows = [
+  { id: 'JE-1001', date: '2026-08-20', ref: 'INV-3021', narrative: 'Sales invoice — ABC Industries', debit: 850000, credit: 0, account: '1100 · Receivables' },
+  { id: 'JE-1002', date: '2026-08-20', ref: 'INV-3021', narrative: 'Sales revenue', debit: 0, credit: 720338, account: '4000 · Revenue' },
+  { id: 'JE-1003', date: '2026-08-20', ref: 'INV-3021', narrative: 'GST output', debit: 0, credit: 129662, account: '2200 · GST Payable' },
+  { id: 'JE-1004', date: '2026-08-21', ref: 'PO-2011', narrative: 'Vendor A payment', debit: 0, credit: 480000, account: '2000 · Payables' },
+  { id: 'JE-1005', date: '2026-08-21', ref: 'PO-2011', narrative: 'Bank payment', debit: 480000, credit: 0, account: '1000 · Cash' },
+];
+
+function render(filter = '') {
+  const f = filter.toLowerCase();
+  const data = rows.filter(r => !f || JSON.stringify(r).toLowerCase().includes(f));
+  document.getElementById('glTable').innerHTML = dataTable({
+    columns: [
+      { label: 'JE #', key: 'id', mono: true },
+      { label: 'Date', key: 'date', render: r => fmtDate(r.date) },
+      { label: 'Account', key: 'account', mono: true },
+      { label: 'Narrative', key: 'narrative' },
+      { label: 'Debit', align: 'right', num: true, render: r => r.debit ? fmtCurrencyINR(r.debit) : '—' },
+      { label: 'Credit', align: 'right', num: true, render: r => r.credit ? fmtCurrencyINR(r.credit) : '—' },
+    ],
+    rows: data
+  });
+}
+render();
+
+document.getElementById('searchJE').addEventListener('input', e => render(e.target.value));
+document.getElementById('newJeBtn').addEventListener('click', () => toast('New Journal Entry', 'Form opens in a modal', 'info'));
+document.getElementById('exportBtn').addEventListener('click', () => toast('Export queued', 'GL export will be emailed', 'info'));
+document.getElementById('densityBtn').addEventListener('click', e => {
+  const next = toggleDensity();
+  e.target.textContent = next.charAt(0).toUpperCase() + next.slice(1);
+});
+</script>
+</body>
+</html>

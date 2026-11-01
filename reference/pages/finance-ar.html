@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounts Receivable · ERP Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Accounts Receivable</div>
+        <div class="page-subtitle">Customer invoices · ageing · collections</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" id="reminderBtn">Send Reminders</button>
+        <button class="btn btn-primary" id="newInvBtn">New Invoice</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Total Receivable</span></div><div class="kpi-value">₹1.80 Cr</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Due this week</span></div><div class="kpi-value">₹42.6 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Overdue</span></div><div class="kpi-value" style="color:var(--critical)">₹12.4 L</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Avg Collection Days</span></div><div class="kpi-value">34</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header">
+        <div class="card-title">Ageing Analysis</div>
+      </div>
+      <div class="card-body" id="ageingWrap"></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Customer Invoices</div></div>
+      <div class="card-body" id="arTable"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth, fmtCurrencyINR, fmtDate } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Finance', 'Accounts Receivable'], notifications });
+
+/* Ageing buckets */
+const ageing = [
+  { bucket: 'Current',      amount: 8200000, count: 24, level: 'success' },
+  { bucket: '1–30 days',    amount: 5400000, count: 18, level: 'info' },
+  { bucket: '31–60 days',   amount: 2800000, count: 9,  level: 'attention' },
+  { bucket: '61–90 days',   amount: 1100000, count: 4,  level: 'warning' },
+  { bucket: '90+ days',     amount: 500000,  count: 2,  level: 'critical' },
+];
+const total = ageing.reduce((s, a) => s + a.amount, 0);
+
+document.getElementById('ageingWrap').innerHTML = `
+  <div class="grid grid-4">
+    ${ageing.map(a => `
+      <div class="kpi">
+        <div class="kpi-header">
+          <span class="kpi-label">${a.bucket}</span>
+          <span class="chip chip-${a.level}">${a.count}</span>
+        </div>
+        <div class="kpi-value">${fmtCurrencyINR(a.amount)}</div>
+        <div class="progress" style="margin-top:8px">
+          <div class="progress-bar ${a.level}" style="width:${(a.amount/total*100).toFixed(1)}%"></div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+
+const invoices = [
+  { id: 'INV-3021', customer: 'ABC Industries',    amount: 850000,  due: '2026-09-05', days: 5,   status: 'Pending' },
+  { id: 'INV-3022', customer: 'LMN Pharma',        amount: 1240000, due: '2026-08-30', days: -12, status: 'Overdue' },
+  { id: 'INV-3023', customer: 'XYZ Manufacturing', amount: 420000,  due: '2026-09-10', days: 8,   status: 'Paid' },
+  { id: 'INV-3024', customer: 'PQR Engineering',   amount: 680000,  due: '2026-09-15', days: 12,  status: 'Pending' },
+  { id: 'INV-3025', customer: 'DEF Tools',         amount: 145000,  due: '2026-08-25', days: -3,  status: 'Overdue' },
+];
+
+document.getElementById('arTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Invoice', key: 'id', mono: true },
+    { label: 'Customer', key: 'customer' },
+    { label: 'Amount', align: 'right', num: true, render: r => fmtCurrencyINR(r.amount) },
+    { label: 'Due Date', render: r => fmtDate(r.due) },
+    { label: 'Days', align: 'right', num: true, render: r => r.days < 0
+        ? `<span style="color:var(--critical)">${Math.abs(r.days)}d overdue</span>`
+        : `<span style="color:var(--text-muted)">${r.days}d</span>` },
+    { label: 'Status', render: r => {
+        const map = { Paid: 'success', Pending: 'attention', Overdue: 'critical' };
+        return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+    { label: '', render: () => `<button class="btn btn-ghost btn-sm">Remind</button>` },
+  ],
+  rows: invoices
+});
+
+document.getElementById('reminderBtn').addEventListener('click', () => {
+  toast('Reminders queued', 'Payment reminders sent to 2 overdue customers', 'success');
+});
+document.getElementById('newInvBtn').addEventListener('click', () => toast('New Invoice', 'Invoice form opens here', 'info'));
+</script>
+</body>
+</html>

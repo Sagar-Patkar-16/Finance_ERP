@@ -1,0 +1,78 @@
+<!-- warehouse-bin.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warehouse / Bin · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Warehouse / Bin View</div>
+        <div class="page-subtitle">Company → Warehouse → Zone → Rack → Shelf → Bin</div>
+      </div>
+    </div>
+
+    <div class="stepper">
+      <div class="step done"><span class="step-dot">✓</span><span>Acme HQ</span></div>
+      <span class="step-sep">›</span>
+      <div class="step done"><span class="step-dot">✓</span><span>Main Warehouse</span></div>
+      <span class="step-sep">›</span>
+      <div class="step active"><span class="step-dot">3</span><span>Zone A</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">4</span><span>Rack 12</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">5</span><span>Shelf B</span></div>
+      <span class="step-sep">›</span>
+      <div class="step"><span class="step-dot">6</span><span>Bin 04</span></div>
+    </div>
+
+    <div class="grid grid-4" id="binGrid"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { statusChip } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Inventory', 'Warehouse / Bin'], notifications });
+
+const bins = [
+  { code: 'A-12-B-01', item: 'Steel Plate 5mm', qty: 80, cap: 500, level: 'warning' },
+  { code: 'A-12-B-02', item: 'Aluminium Sheet', qty: 420, cap: 500, level: 'success' },
+  { code: 'A-12-B-03', item: 'Bearing SKF-6205', qty: 45, cap: 200, level: 'critical' },
+  { code: 'A-12-B-04', item: 'Motor 5HP', qty: 12, cap: 50, level: 'warning' },
+  { code: 'A-12-B-05', item: 'Copper Wire 2mm', qty: 1200, cap: 2000, level: 'success' },
+  { code: 'A-12-B-06', item: 'Empty', qty: 0, cap: 500, level: 'neutral' },
+];
+
+document.getElementById('binGrid').innerHTML = bins.map(b => `
+  <div class="kpi" style="cursor:pointer">
+    <div class="kpi-header">
+      <span class="kpi-label">${b.code}</span>
+      ${statusChip(b.level, b.level === 'neutral' ? 'Empty' : b.qty > b.cap * 0.7 ? 'Healthy' : b.qty > b.cap * 0.2 ? 'Low' : 'Critical')}
+    </div>
+    <div style="font-size:13px;font-weight:600;margin:4px 0">${b.item}</div>
+    <div class="progress"><div class="progress-bar ${b.level}" style="width:${Math.min(100, (b.qty/b.cap)*100)}%"></div></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${b.qty} / ${b.cap}</div>
+  </div>`).join('');
+</script>
+</body>
+</html>

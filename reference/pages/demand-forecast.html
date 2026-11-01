@@ -1,0 +1,110 @@
+<!-- demand-forecast.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demand Forecast · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Demand Forecast</div>
+        <div class="page-subtitle">Sales history + seasonality + orders → forecast</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Retrain Model</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Forecast Accuracy</span></div><div class="kpi-value">94.2%</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Demand vs Forecast</span></div><div class="kpi-value">+3.8%</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Seasonal Peak</span></div><div class="kpi-value">Nov</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Variance (σ)</span></div><div class="kpi-value">4.2%</div></div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="card-header"><div class="card-title">Demand vs Forecast</div></div>
+      <div class="card-body" style="height:360px"><canvas id="forecastChart"></canvas></div>
+    </div>
+  </main>
+</div>
+
+<!-- Insert after the forecast chart card -->
+<div class="grid grid-3" style="margin-top:var(--sp-5)">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Forecast Accuracy</div></div>
+    <div class="card-body">
+      <div style="display:grid;gap:12px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Product A</span><b>96.2%</b></div>
+          <div class="progress"><div class="progress-bar success" style="width:96.2%"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Product B</span><b>92.8%</b></div>
+          <div class="progress"><div class="progress-bar" style="width:92.8%"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Product C</span><b>88.4%</b></div>
+          <div class="progress"><div class="progress-bar warning" style="width:88.4%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Seasonal Peaks</div></div>
+    <div class="card-body">
+      <div style="font-size:13px;line-height:1.9">
+        <div style="display:flex;justify-content:space-between"><span class="text-muted">Peak month</span><b>November</b></div>
+        <div style="display:flex;justify-content:space-between"><span class="text-muted">Low month</span><b>April</b></div>
+        <div style="display:flex;justify-content:space-between"><span class="text-muted">Peak/Low ratio</span><b>1.68×</b></div>
+        <div style="display:flex;justify-content:space-between"><span class="text-muted">Seasonality strength</span><b>High</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Demand Variance</div></div>
+    <div class="card-body">
+      <div class="kpi-value">4.2%</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Standard deviation (σ) vs forecast</div>
+      <div style="margin-top:12px;padding:8px 12px;background:var(--success-bg);border-radius:8px;font-size:12px;color:var(--success)">
+        ✓ Within acceptable threshold (&lt;5%)
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { lineChart } from '../js/charts.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['Supply Chain', 'Demand Forecast'], notifications });
+
+lineChart('forecastChart', {
+  labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  datasets: [
+    { label: 'Actual Demand', data: [120,130,140,135,150,160,155,165,170,175,190,210], color: '#4F46E5', fill: true },
+    { label: 'Forecast',      data: [125,132,142,138,152,162,158,168,175,182,195,215], color: '#06B6D4', dashed: true }
+  ]
+});
+</script>
+</body>
+</html>

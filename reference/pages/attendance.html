@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attendance · ERP Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#4F46E5">
+</head>
+<body>
+<div class="app">
+  <header class="topbar"></header>
+  <main class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Attendance</div>
+        <div class="page-subtitle">Punch-in · shifts · biometric · regularization</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary">Sync Biometric</button>
+        <button class="btn btn-primary">Export Register</button>
+      </div>
+    </div>
+
+    <div class="grid grid-kpi">
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Present Today</span></div><div class="kpi-value" style="color:var(--success)">128</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Absent</span></div><div class="kpi-value" style="color:var(--critical)">6</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">On Leave</span></div><div class="kpi-value">8</div></div>
+      <div class="kpi"><div class="kpi-header"><span class="kpi-label">Late Arrivals</span></div><div class="kpi-value" style="color:var(--warning)">4</div></div>
+    </div>
+
+    <div class="table-toolbar" style="margin-top:var(--sp-5)">
+      <select class="select" style="width:auto"><option>Today</option><option>This week</option><option>This month</option></select>
+      <select class="select" style="width:auto"><option>All departments</option><option>Production</option><option>Sales</option><option>Finance</option></select>
+    </div>
+
+    <div id="attTable"></div>
+  </main>
+</div>
+
+<script type="module">
+import { requireAuth } from '../js/app.js';
+import { mountShell } from '../js/nav.js';
+import { dataTable, toast } from '../js/components.js';
+import * as api from '../js/api.js';
+
+requireAuth();
+const notifications = await api.getNotifications();
+mountShell({ breadcrumb: ['HRMS', 'Attendance'], notifications });
+
+document.getElementById('attTable').innerHTML = dataTable({
+  columns: [
+    { label: 'Employee', key: 'name' },
+    { label: 'Department', key: 'dept' },
+    { label: 'Punch In', key: 'in', mono: true },
+    { label: 'Punch Out', key: 'out', mono: true },
+    { label: 'Hours', align: 'right', num: true, key: 'hrs' },
+    { label: 'Overtime', align: 'right', num: true, render: r => r.ot ? `<span style="color:var(--success)">+${r.ot} hrs</span>` : '—' },
+    { label: 'Status', render: r => {
+      const map = { Present: 'success', Late: 'warning', Absent: 'critical', 'On Leave': 'info' };
+      return `<span class="chip chip-${map[r.status]}">${r.status}</span>`;
+    }},
+    { label: '', render: r => r.status === 'Late' ? '<button class="btn btn-ghost btn-sm">Regularize</button>' : '' },
+  ],
+  rows: [
+    { name: 'Rajesh Kumar', dept: 'Production', in: '09:02', out: '18:15', hrs: 9.2, ot: 0, status: 'Present' },
+    { name: 'Neha Singh',   dept: 'Sales',      in: '09:35', out: '18:45', hrs: 9.2, ot: 0, status: 'Late' },
+    { name: 'Arun Verma',   dept: 'Finance',    in: '08:58', out: '18:20', hrs: 9.4, ot: 0.4, status: 'Present' },
+    { name: 'Sunita Patel', dept: 'HR',         in: '—',     out: '—',     hrs: 0,   ot: 0, status: 'On Leave' },
+    { name: 'Manoj Joshi',  dept: 'Production', in: '09:05', out: '21:00', hrs: 11.9,ot: 2.9, status: 'Present' },
+  ]
+});
+</script>
+</body>
+</html>
